@@ -1,6 +1,6 @@
 {
   "name": "sage-geo-agent",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "GEO-Experte für Generative Engine Optimization - Analysiert und optimiert Webseiten für KI-Sichtbarkeit",
   "engines": {
     "node": ">=20.0.0"
