@@ -8,8 +8,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Sparkles } from 'lucide-react'
 import type { AnalysisResult as AnalysisResultType, HistoryItem } from '@/types'
 
-// Use relative URLs in production, configured URL in development
-const API_URL = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL || '')
+// Always use relative URLs - Vite proxy handles /api in dev mode
+const API_URL = ''
 
 function App() {
   const [darkMode, setDarkMode] = useState(false)
