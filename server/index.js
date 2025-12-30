@@ -26,18 +26,18 @@ initDatabase()
 app.use('/api/analyze', analyzeRouter)
 app.use('/api/history', historyRouter)
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')))
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'))
-  })
-}
-
-// Health check
+// Health check (must be before catch-all)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
+})
+
+// Serve static files - always serve if dist folder exists
+const distPath = path.join(__dirname, '../client/dist')
+app.use(express.static(distPath))
+
+// Catch-all route for SPA - serve index.html for all non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'))
 })
 
 app.listen(PORT, () => {
