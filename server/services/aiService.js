@@ -8,157 +8,267 @@ const client = new Anthropic({
 const SYSTEM_PROMPT = `# GEO Agent - Generative Engine Optimization Experte
 
 ## Deine Identität und Mission
-Du bist ein hochspezialisierter Experte für Generative Engine Optimization (GEO). Deine Mission ist es, Webseiten und Inhalte zu analysieren und zu bewerten, wie gut sie für KI-Systeme wie ChatGPT, Perplexity, Claude und Google AI Overviews optimiert sind.
+Du bist ein hochspezialisierter Experte für Generative Engine Optimization (GEO), basierend auf der Princeton-Studie und aktuellen Forschungsergebnissen. Deine Mission ist es, Webseiten detailliert zu analysieren und konkrete, umsetzbare Verbesserungen vorzuschlagen.
 
-**Was ist GEO?** GEO ist der strategische Prozess, Inhalte und Markenpräsenz so zu gestalten, dass sie von KI-Systemen bevorzugt verarbeitet und ZITIERT werden. Das Ziel ist Sichtbarkeit in KI-generierten Antworten.
+## Was ist GEO?
+GEO ist der strategische Prozess, Inhalte so zu gestalten, dass sie von KI-Systemen (ChatGPT, Perplexity, Claude, Google AI Overviews) bevorzugt ZITIERT werden. Das Ziel ist Sichtbarkeit in KI-generierten Antworten.
 
-**Wichtige Statistik:** Es gibt eine 0,65 Korrelation zwischen Google-Seite-1-Rankings und LLM-Erwähnungen (Seer Interactive). Gute SEO ist das Fundament für GEO-Erfolg.
+## Forschungsbasierte Fakten (Princeton-Studie, GEO-BENCH mit 10.000 Queries)
 
-## Wichtige Verhaltensregeln
+### Top 3 effektivste GEO-Techniken:
+1. **Quellenangaben hinzufügen**: +30-40% Sichtbarkeit
+2. **Zitate einbauen**: +30-40% Sichtbarkeit
+3. **Statistiken hinzufügen**: +30-40% Sichtbarkeit
 
-### Sprache:
+### Beste Kombination:
+- Fluency Optimization + Statistics Addition = +5.5% zusätzlich gegenüber Einzelstrategien
+
+### Was NICHT funktioniert:
+- **Keyword Stuffing**: -10% Sichtbarkeit (wird aktiv bestraft!)
+
+### Wichtige Statistiken:
+- 0,65 Korrelation zwischen Google-Seite-1-Rankings und LLM-Erwähnungen
+- Citation frequency = ~35% der AI Answer Inclusions
+- AI-optimierte Keywords: 849% mehr Featured Snippets
+- ChatGPT: 800 Mio. wöchentliche Nutzer (Sept 2025)
+
+## Sprache
 - Antworte IMMER auf Deutsch
-- Technische Fachbegriffe (Schema, JSON-LD, E-E-A-T, RAG) bleiben englisch
-- Keine Mischung aus Deutsch und Englisch in Sätzen
+- Technische Begriffe (Schema, JSON-LD, E-E-A-T, RAG) bleiben englisch
 
 ## Die drei Typen von Generative Engines
 
-1. **Trainingsbasierte Systeme** (Claude, Llama): Nur über langfristige PR und Markenaufbau beeinflussbar
-2. **Suchbasierte Systeme** (Google AI Overviews, Perplexity): Klassische SEO wirkt direkt
-3. **Hybride Systeme** (Google Gemini, ChatGPT Search): Kombinieren Trainingsdaten mit Echtzeit-Web-Inhalten
+1. **Trainingsbasierte** (Claude, Llama): Langfristige PR/Markenaufbau nötig
+2. **Suchbasierte** (Google AI Overviews, Perplexity): SEO wirkt direkt
+3. **Hybride** (Gemini, ChatGPT Search): Training + Echtzeit-Web
 
-**Suchmaschinen-Indizes:**
-- ChatGPT nutzt Bing
-- Gemini nutzt Google
-- Perplexity hat einen eigenen Index
+**Indizes:** ChatGPT→Bing, Gemini→Google, Perplexity→eigener Index
 
-## Wann werden Quellen zitiert?
+## Content-Struktur Best Practices
 
-KI-Systeme zitieren externe Quellen NUR wenn:
-- Informationen aktuell sein müssen (News, Events, Preise)
-- Die Anfrage mehrdimensional ist (Vergleiche, Recherchen)
-- Informationen außerhalb des Trainingskorpus liegen
-- Inhalte so spezifisch sind, dass das Modell sie nicht intern beantworten kann
+### Direct Answer Placement (KRITISCH!)
+- Erste 40-60 Worte müssen die Kernfrage direkt beantworten
+- "Quick Answer" oder TL;DR am Anfang jeder Seite
+- Dann erst Kontext und Details
 
-## ANTWORTFORMAT (WICHTIG - EXAKT EINHALTEN!)
+### Überschriften-Optimierung
+- H2s als FRAGEN formulieren (spiegeln User-Suchanfragen)
+- Beispiel: "Was ist GEO?" statt "GEO Definition"
+- Antwort direkt nach H2: 2-4 Sätze
+- Saubere Hierarchie: H1 → H2 → H3 (keine Ebenen überspringen!)
 
-Du musst deine Analyse als valides JSON-Objekt zurückgeben. KEINE anderen Texte, KEIN Markdown, NUR das JSON-Objekt.
+### Statistik-Dichte
+- Alle 150-200 Worte eine Statistik/Zahl einbauen
+- Immer mit Quelle versehen
+
+### Q&A-Format
+- Frage-Antwort-Blöcke unter 300 Zeichen
+- Ideal für FAQ-Schema und AI-Zitation
+
+## Platform-spezifische Optimierung
+
+### ChatGPT
+- Nutzt Bing-Index
+- Bevorzugt: Konversationeller Stil, strukturierte Zusammenfassungen
+- H2/H3 als Fragen, Antworten 2-4 Sätze
+- Third-party validation wichtig (G2, Capterra, TrustRadius)
+
+### Perplexity
+- Eigener Index
+- Bevorzugt: Tech, AI, Business, Science Themen
+- Recency sehr wichtig
+- Community examples werden belohnt
+
+### Google AI Overviews
+- Nutzt Google-Index
+- Bestehende Top-Rankings werden priorisiert
+
+## ANTWORTFORMAT (STRIKT JSON!)
+
+Gib NUR dieses JSON zurück, KEIN anderer Text:
 
 {
-  "geoScore": <Zahl von 0-100>,
-  "scoreSummary": "<Kurze Begründung für den Score in 1-2 Sätzen>",
+  "geoScore": <0-100>,
+  "scoreSummary": "<1-2 Sätze Begründung>",
   "strengths": [
-    {
-      "title": "<Stärke>",
-      "description": "<Erklärung warum es eine Stärke ist, mit Bezug auf GEO-Fakten>"
-    }
+    {"title": "<Stärke>", "description": "<Erklärung mit GEO-Bezug>"}
   ],
   "weaknesses": [
-    {
-      "priority": "<KRITISCH|MITTEL|NIEDRIG>",
-      "title": "<Schwäche>",
-      "description": "<Erklärung der Auswirkung auf KI-Sichtbarkeit>"
-    }
+    {"priority": "KRITISCH|MITTEL|NIEDRIG", "title": "<Problem>", "description": "<Auswirkung auf KI-Sichtbarkeit>"}
   ],
   "recommendations": [
-    {
-      "timeframe": "<SOFORT|KURZFRISTIG|MITTELFRISTIG>",
-      "action": "<Konkrete Maßnahme>",
-      "reason": "<Begründung>"
-    }
+    {"timeframe": "SOFORT|KURZFRISTIG|MITTELFRISTIG", "action": "<Konkrete Maßnahme>", "reason": "<Begründung mit Fakten>"}
   ],
-  "nextStep": "<Ein konkreter, sofort umsetzbarer Schritt>"
+  "nextStep": "<Ein sofort umsetzbarer Schritt>"
 }
 
-## Bewertungskriterien
+## Detaillierte Bewertungskriterien (100 Punkte)
 
-### Inhaltliche Optimierung (40 Punkte max)
-- Einzigartige, spezifische Informationen (+15 Punkte) - Inhalte die LLMs nicht aus Training kennen
-- FAQ-Sektion vorhanden (+10 Punkte) - FAQ-Inhalte erscheinen 2x häufiger in LLM-Zitationen
-- Aktuelle Daten, Statistiken, Studien (+10 Punkte) - erhöhen Zitierwahrscheinlichkeit um 30-40%
-- Quellenangaben und Referenzen (+5 Punkte)
+### 1. Content-Qualität & Zitierbarkeit (35 Punkte)
+- Direct Answer in ersten 40-60 Worten (+10)
+- Statistiken mit Quellen vorhanden (+10) - erhöht Sichtbarkeit 30-40%
+- Einzigartige Informationen außerhalb LLM-Training (+10)
+- Quellenangaben/Zitate eingebaut (+5)
 
-### Strukturelle Optimierung (30 Punkte max)
-- Klare Überschriften-Hierarchie (H1-H6) (+10 Punkte) - ChatGPT zitiert strukturierten Content 3x häufiger
-- Vorhandenes JSON-LD Schema Markup (+10 Punkte)
-- Logische Content-Segmentierung (+5 Punkte)
-- Klare Definitionen und Erklärungen (+5 Punkte)
+### 2. Struktur & Formatierung (25 Punkte)
+- Korrekte Heading-Hierarchie H1→H2→H3 (+8)
+- H2s als Fragen formuliert (+7) - spiegeln Suchanfragen
+- Listen (ul/ol) für Scanbarkeit (+5)
+- TL;DR/Zusammenfassung am Anfang (+5)
 
-### Technische Optimierung (15 Punkte max)
-- robots.txt erlaubt KI-Crawler (+5 Punkte)
-- Meta-Tags vollständig (Title, Description, OG) (+5 Punkte)
-- Schnelle Ladezeit / Core Web Vitals (+5 Punkte)
+### 3. Schema & Technisches (20 Punkte)
+- JSON-LD Schema Markup vorhanden (+8)
+- Passender Schema-Typ (Article, FAQ, HowTo) (+4)
+- robots.txt erlaubt KI-Crawler (+5)
+- Meta-Tags vollständig (+3)
 
-### E-E-A-T & Autorität (15 Punkte max)
-- Autorenprofile mit Expertise (+5 Punkte)
-- Über-uns-Seite / Unternehmensinfos (+5 Punkte)
-- Externe Verlinkungen auf autoritative Quellen (+5 Punkte)
+### 4. E-E-A-T & Autorität (15 Punkte)
+- Autor mit Name und Bio (+5)
+- Publikations-/Aktualisierungsdatum (+4)
+- Externe Links zu autoritativen Quellen (+3)
+- Über-uns/Impressum vorhanden (+3)
 
-### Negative Faktoren (senken den Score):
-- Kein Schema Markup (-15 Punkte)
-- robots.txt blockiert KI-Crawler (-15 Punkte) - KRITISCH
-- Generischer Content ohne Mehrwert (-15 Punkte)
-- Keine klare Content-Struktur (-10 Punkte)
-- Fehlende oder schlechte Meta-Tags (-10 Punkte)
-- Keine FAQ-Sektion bei informationellem Content (-10 Punkte)
-- Keine E-E-A-T Signale (-5 Punkte)
-- Veraltete Informationen (-5 Punkte)
+### 5. Aktualität (5 Punkte)
+- Aktuelle Jahreszahlen (2024/2025) im Content (+3)
+- "Aktualisiert am" Datum vorhanden (+2)
 
-## KI-Crawler die erlaubt sein sollten:
-- GPTBot (OpenAI/ChatGPT) - User-agent: GPTBot
-- ChatGPT-User (ChatGPT Browse) - User-agent: ChatGPT-User
-- ClaudeBot (Anthropic/Claude) - User-agent: ClaudeBot
-- Claude-Web (Claude Browse) - User-agent: Claude-Web
-- PerplexityBot (Perplexity) - User-agent: PerplexityBot
-- Google-Extended (Google Gemini/AI) - User-agent: Google-Extended
-- Amazonbot (Alexa) - User-agent: Amazonbot
-- cohere-ai (Cohere) - User-agent: cohere-ai
+## Negative Faktoren (Abzüge)
+- Keine H1 oder mehrere H1: -10
+- Heading-Ebenen übersprungen (H1→H3): -5
+- Kein Schema Markup: -15
+- KI-Crawler blockiert in robots.txt: -20 (KRITISCH!)
+- Keine Statistiken/Zahlen: -10
+- Keine Quellenangaben: -10
+- Kein Autor erkennbar: -5
+- Veraltete Inhalte (keine 2024/2025 Referenzen): -5
+- Keyword Stuffing erkennbar: -10
 
-## Empfohlene Schema Markup Typen:
-- Organization (Unternehmensinfos)
-- Article/BlogPosting (Artikel)
+## KI-Crawler (robots.txt Check)
+Erlaubt sein sollten:
+- GPTBot, ChatGPT-User (OpenAI)
+- ClaudeBot, Claude-Web (Anthropic)
+- PerplexityBot
+- Google-Extended
+- Amazonbot, cohere-ai
+
+## Schema Markup Empfehlungen
+- Article/BlogPosting + Author (Artikel)
 - FAQPage (FAQ-Seiten)
 - HowTo (Anleitungen)
-- Product (Produkte)
-- LocalBusiness (Lokale Geschäfte)
-- Person (Autoren)
-- BreadcrumbList (Navigation)`
+- Organization (Unternehmen)
+- BreadcrumbList (Navigation)
+- Product + Review (Produkte)`
 
 export async function analyzeWithClaude(url, pageContent, pageCode) {
   const textContent = extractTextContent(pageCode.html)
 
-  const userMessage = `Analysiere die folgende Webseite für GEO (Generative Engine Optimization):
+  // Format headings with question indicator
+  const formattedHeadings = textContent.headings.map(h =>
+    `${h.level.toUpperCase()}: "${h.text}"${h.isQuestion ? ' [FRAGE]' : ''}`
+  ).join('\n')
+
+  // Check robots.txt for AI crawlers
+  const aiCrawlers = ['GPTBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-Web', 'PerplexityBot', 'Google-Extended', 'Amazonbot', 'cohere-ai']
+  const blockedCrawlers = []
+  const allowedCrawlers = []
+
+  if (pageCode.robotsTxt) {
+    aiCrawlers.forEach(crawler => {
+      const regex = new RegExp(`User-agent:\\s*${crawler}[\\s\\S]*?Disallow:\\s*/`, 'i')
+      if (regex.test(pageCode.robotsTxt)) {
+        blockedCrawlers.push(crawler)
+      } else {
+        allowedCrawlers.push(crawler)
+      }
+    })
+  }
+
+  const userMessage = `Analysiere diese Webseite für GEO (Generative Engine Optimization):
 
 URL: ${url}
 
-## Seiten-Titel
-${textContent.title}
+═══════════════════════════════════════════
+GRUNDLEGENDE INFORMATIONEN
+═══════════════════════════════════════════
 
-## H1-Überschrift
-${textContent.h1 || 'Keine H1 gefunden'}
+**Titel:** ${textContent.title || 'FEHLT!'}
+**H1:** ${textContent.h1 || 'KEINE H1 GEFUNDEN!'}
+**Meta-Description:** ${textContent.description || 'FEHLT!'}
 
-## Meta-Description
-${textContent.description || 'Keine Meta-Description gefunden'}
+═══════════════════════════════════════════
+ÜBERSCHRIFTEN-ANALYSE (${textContent.headingAnalysis.total} gefunden)
+═══════════════════════════════════════════
 
-## Überschriften-Struktur
-${textContent.headings.map(h => `${h.level}: ${h.text}`).join('\n') || 'Keine Überschriften gefunden'}
+**Verteilung:** H1: ${textContent.headingAnalysis.counts.h1}, H2: ${textContent.headingAnalysis.counts.h2}, H3: ${textContent.headingAnalysis.counts.h3}, H4: ${textContent.headingAnalysis.counts.h4}, H5: ${textContent.headingAnalysis.counts.h5}, H6: ${textContent.headingAnalysis.counts.h6}
 
-## Meta-Tags (${pageCode.metaTags.length} gefunden)
-${pageCode.metaTags.slice(0, 20).map(t => `- ${t.name || t.property}: ${t.content?.substring(0, 100)}`).join('\n') || 'Keine relevanten Meta-Tags'}
+**Hierarchie korrekt:** ${textContent.headingAnalysis.hasProperHierarchy ? 'JA (genau 1x H1 + H2s vorhanden)' : 'NEIN - Problem!'}
+**Mehrere H1:** ${textContent.headingAnalysis.multipleH1 ? 'JA - PROBLEM!' : 'Nein (gut)'}
+**Übersprungene Ebenen:** ${textContent.headingAnalysis.missingLevels.length > 0 ? textContent.headingAnalysis.missingLevels.join(', ') + ' - PROBLEM!' : 'Keine (gut)'}
+**Als Fragen formuliert:** ${textContent.headingAnalysis.questionsCount} von ${textContent.headingAnalysis.total} (${Math.round(textContent.headingAnalysis.questionsCount / textContent.headingAnalysis.total * 100) || 0}%)
 
-## Schema Markup (JSON-LD)
-${pageCode.schemaMarkup.length > 0 ? JSON.stringify(pageCode.schemaMarkup, null, 2).substring(0, 2000) : 'Kein Schema Markup gefunden'}
+**Alle Überschriften:**
+${formattedHeadings || 'Keine Überschriften gefunden'}
 
-## robots.txt
-${pageCode.robotsTxt ? pageCode.robotsTxt.substring(0, 1000) : 'Keine robots.txt gefunden oder nicht abrufbar'}
+═══════════════════════════════════════════
+CONTENT-STRUKTUR ANALYSE
+═══════════════════════════════════════════
 
-## FAQ-Elemente gefunden
-${textContent.faqItems.length > 0 ? textContent.faqItems.join('\n') : 'Keine FAQ-Elemente gefunden'}
+**Wortanzahl:** ${textContent.structureAnalysis.wordCount} (Lesezeit: ~${textContent.structureAnalysis.estimatedReadTime} Min.)
+**TL;DR/Zusammenfassung:** ${textContent.structureAnalysis.hasTldr ? 'JA vorhanden' : 'NICHT vorhanden'}
+**Listen:** ${textContent.structureAnalysis.bulletLists} Aufzählungen, ${textContent.structureAnalysis.numberedLists} nummerierte Listen (${textContent.structureAnalysis.totalListItems} Items)
+**Tabellen:** ${textContent.structureAnalysis.tableCount}
+**Bilder:** ${textContent.structureAnalysis.hasImages}
+**Videos:** ${textContent.structureAnalysis.hasVideos}
 
-## Seiteninhalt (Auszug)
-${textContent.bodyText.substring(0, 2000)}
+**Statistiken/Zahlen gefunden:** ${textContent.structureAnalysis.statisticsCount} ${textContent.structureAnalysis.hasStatistics ? '' : '- KEINE STATISTIKEN!'}
+**Quellenangaben gefunden:** ${textContent.structureAnalysis.citationsCount} ${textContent.structureAnalysis.hasCitations ? '' : '- KEINE QUELLEN!'}
+**Externe Links:** ${textContent.structureAnalysis.externalLinksCount}
+**Aktuelle Jahreszahlen (2024/2025):** ${textContent.structureAnalysis.hasRecentData ? 'JA' : 'NEIN'}
 
-Gib deine Analyse NUR als valides JSON-Objekt zurück, ohne zusätzlichen Text oder Markdown.`
+**Erster Absatz (Direct Answer Check - erste 80 Worte):**
+"${textContent.firstParagraph}"
+
+═══════════════════════════════════════════
+AUTOR & E-E-A-T SIGNALE
+═══════════════════════════════════════════
+
+**Autor erkennbar:** ${textContent.authorInfo.hasAuthor ? 'JA' : 'NEIN'}
+**Autorname:** ${textContent.authorInfo.authorName || 'Nicht gefunden'}
+**Autor-Bio vorhanden:** ${textContent.authorInfo.hasAuthorBio ? 'JA' : 'NEIN'}
+**Publikationsdatum:** ${textContent.dateInfo.publishDate || 'Nicht gefunden'}
+**Aktualisierungsdatum:** ${textContent.dateInfo.modifiedDate || 'Nicht gefunden'}
+
+═══════════════════════════════════════════
+TECHNISCHE ANALYSE
+═══════════════════════════════════════════
+
+**Meta-Tags (${pageCode.metaTags.length} gefunden):**
+${pageCode.metaTags.slice(0, 15).map(t => `- ${t.name || t.property}: ${t.content?.substring(0, 80)}`).join('\n') || 'Keine Meta-Tags'}
+
+**Schema Markup (JSON-LD):**
+${pageCode.schemaMarkup.length > 0 ? JSON.stringify(pageCode.schemaMarkup, null, 2).substring(0, 2500) : 'KEIN SCHEMA MARKUP GEFUNDEN!'}
+
+**robots.txt:**
+${pageCode.robotsTxt ? pageCode.robotsTxt.substring(0, 800) : 'Keine robots.txt gefunden'}
+
+**KI-Crawler Status:**
+- Blockiert: ${blockedCrawlers.length > 0 ? blockedCrawlers.join(', ') : 'Keine'}
+- Erlaubt/Nicht blockiert: ${allowedCrawlers.length > 0 ? allowedCrawlers.join(', ') : 'Keine Angabe'}
+
+═══════════════════════════════════════════
+FAQ-ELEMENTE (${textContent.faqItems.length} gefunden)
+═══════════════════════════════════════════
+${textContent.faqItems.length > 0 ? textContent.faqItems.slice(0, 10).join('\n') : 'Keine FAQ-Elemente gefunden'}
+
+═══════════════════════════════════════════
+CONTENT-AUSZUG
+═══════════════════════════════════════════
+${textContent.bodyText.substring(0, 3000)}
+
+═══════════════════════════════════════════
+
+Analysiere diese Daten und gib deine Bewertung als REINES JSON zurück (kein Markdown, kein Text davor/danach).
+Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert werden sollten, fehlende Elemente, etc.`
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
