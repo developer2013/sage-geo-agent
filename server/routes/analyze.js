@@ -1,10 +1,173 @@
 import express from 'express'
 import { v4 as uuidv4 } from 'uuid'
+import * as cheerio from 'cheerio'
 import { fetchPageContent } from '../services/scraperService.js'
 import { analyzeWithClaude } from '../services/aiService.js'
 import { saveAnalysis, getRecentAnalysisByUrl } from '../services/dbService.js'
 
 const router = express.Router()
+
+/**
+ * Calculate content statistics from HTML
+ */
+function calculateContentStats(html, baseUrl) {
+  const $ = cheerio.load(html)
+
+  // Remove script and style elements for text extraction
+  $('script, style, noscript').remove()
+
+  // Get text content and count words
+  const textContent = $('body').text()
+  const words = textContent.split(/\s+/).filter(w => w.length > 0)
+  const wordCount = words.length
+
+  // Count images
+  const images = $('img')
+  const imageCount = images.length
+  let imagesWithAlt = 0
+  let imagesWithoutAlt = 0
+
+  images.each((_, img) => {
+    const alt = $(img).attr('alt')
+    if (alt && alt.trim().length > 0) {
+      imagesWithAlt++
+    } else {
+      imagesWithoutAlt++
+    }
+  })
+
+  // Count links (internal vs external)
+  let internalLinks = 0
+  let externalLinks = 0
+
+  try {
+    const baseHost = new URL(baseUrl).hostname
+    $('a[href]').each((_, link) => {
+      const href = $(link).attr('href')
+      if (href) {
+        try {
+          // Handle relative URLs
+          if (href.startsWith('/') || href.startsWith('#') || !href.includes('://')) {
+            internalLinks++
+          } else {
+            const linkHost = new URL(href).hostname
+            if (linkHost === baseHost || linkHost.endsWith('.' + baseHost)) {
+              internalLinks++
+            } else {
+              externalLinks++
+            }
+          }
+        } catch {
+          // Invalid URL, count as internal
+          internalLinks++
+        }
+      }
+    })
+  } catch {
+    // If baseUrl parsing fails, just count all links
+    internalLinks = $('a[href]').length
+  }
+
+  // Count headings
+  const headingStructure = {
+    h1: $('h1').length,
+    h2: $('h2').length,
+    h3: $('h3').length,
+    h4: $('h4').length,
+    h5: $('h5').length,
+    h6: $('h6').length
+  }
+
+  // Count lists and tables
+  const listCount = $('ul, ol').length
+  const tableCount = $('table').length
+
+  // Estimate read time (average 200 words per minute)
+  const estimatedReadTime = Math.max(1, Math.ceil(wordCount / 200))
+
+  return {
+    wordCount,
+    imageCount,
+    imagesWithAlt,
+    imagesWithoutAlt,
+    internalLinks,
+    externalLinks,
+    headingStructure,
+    listCount,
+    tableCount,
+    estimatedReadTime
+  }
+}
+
+/**
+ * Calculate performance metrics based on content analysis
+ */
+function calculatePerformanceMetrics(html, contentStats) {
+  const htmlSize = Buffer.byteLength(html, 'utf8')
+
+  // Estimate image sizes (rough average: 50KB per image)
+  const estimatedImageSize = contentStats.imageCount * 50 * 1024
+
+  const contentSize = {
+    html: htmlSize,
+    images: estimatedImageSize,
+    total: htmlSize + estimatedImageSize
+  }
+
+  // Estimate LCP based on content size
+  let estimatedLCP = 'fast'
+  if (contentSize.total > 2 * 1024 * 1024) { // > 2MB
+    estimatedLCP = 'slow'
+  } else if (contentSize.total > 500 * 1024) { // > 500KB
+    estimatedLCP = 'moderate'
+  }
+
+  // Estimate CLS based on images without dimensions and content structure
+  let estimatedCLS = 'good'
+  if (contentStats.imagesWithoutAlt > 5) {
+    // Many images without alt often correlates with missing dimensions
+    estimatedCLS = 'needs-improvement'
+  }
+  if (contentStats.imageCount > 20 && contentStats.imagesWithoutAlt > contentStats.imageCount * 0.5) {
+    estimatedCLS = 'poor'
+  }
+
+  // Generate suggestions
+  const suggestions = []
+
+  if (htmlSize > 100 * 1024) {
+    suggestions.push('HTML-Groesse reduzieren durch Minifizierung und Komprimierung')
+  }
+
+  if (contentStats.imageCount > 10) {
+    suggestions.push('Bilder lazy-loaden fuer schnellere initiale Ladezeit')
+  }
+
+  if (contentStats.imagesWithoutAlt > 0) {
+    suggestions.push(`${contentStats.imagesWithoutAlt} Bilder ohne Alt-Text hinzufuegen`)
+  }
+
+  if (contentStats.headingStructure.h1 === 0) {
+    suggestions.push('H1-Ueberschrift fuer bessere Seitenstruktur hinzufuegen')
+  } else if (contentStats.headingStructure.h1 > 1) {
+    suggestions.push('Nur eine H1-Ueberschrift pro Seite verwenden')
+  }
+
+  if (contentStats.wordCount < 300) {
+    suggestions.push('Content erweitern - mindestens 300 Woerter empfohlen')
+  }
+
+  if (contentStats.externalLinks > contentStats.internalLinks * 2 && contentStats.externalLinks > 5) {
+    suggestions.push('Mehr interne Verlinkungen fuer bessere Navigation hinzufuegen')
+  }
+
+  return {
+    estimatedLCP,
+    estimatedCLS,
+    contentSize,
+    suggestions
+  }
+}
 
 // Streaming analysis endpoint with progress updates
 router.post('/stream', async (req, res) => {
@@ -59,6 +222,10 @@ router.post('/stream', async (req, res) => {
 
     sendProgress(3, 'Erstelle Bericht...')
 
+    // Calculate content stats and performance metrics
+    const contentStats = calculateContentStats(pageCode.html, validUrl.href)
+    const performanceMetrics = calculatePerformanceMetrics(pageCode.html, contentStats)
+
     const analysis = {
       id: uuidv4(),
       url: validUrl.href,
@@ -72,6 +239,8 @@ router.post('/stream', async (req, res) => {
       imageAnalysis: analysisResult.imageAnalysis || null,
       ctaAnalysis: analysisResult.ctaAnalysis || null,
       tableAnalysis: analysisResult.tableAnalysis || null,
+      contentStats,
+      performanceMetrics,
       pageCode: {
         html: pageCode.html,
         metaTags: pageCode.metaTags,
@@ -127,6 +296,10 @@ router.post('/', async (req, res) => {
 
     const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode)
 
+    // Calculate content stats and performance metrics
+    const contentStats = calculateContentStats(pageCode.html, validUrl.href)
+    const performanceMetrics = calculatePerformanceMetrics(pageCode.html, contentStats)
+
     const analysis = {
       id: uuidv4(),
       url: validUrl.href,
@@ -140,6 +313,8 @@ router.post('/', async (req, res) => {
       imageAnalysis: analysisResult.imageAnalysis || null,
       ctaAnalysis: analysisResult.ctaAnalysis || null,
       tableAnalysis: analysisResult.tableAnalysis || null,
+      contentStats,
+      performanceMetrics,
       pageCode: {
         html: pageCode.html,
         metaTags: pageCode.metaTags,

@@ -1,7 +1,19 @@
+import { useState } from 'react'
 import { X, Clock, ExternalLink, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
 import type { HistoryItem } from '@/types'
 
 interface HistoryPanelProps {
@@ -19,6 +31,30 @@ export function HistoryPanel({
   onSelectItem,
   onDeleteItem,
 }: HistoryPanelProps) {
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart) return
+    const touchEnd = e.changedTouches[0].clientX
+    const distance = touchEnd - touchStart
+    if (distance > 100) {
+      onClose()
+    }
+    setTouchStart(null)
+  }
+
+  const handleDelete = () => {
+    if (deleteId) {
+      onDeleteItem(deleteId)
+      toast.success('Analyse geloescht')
+      setDeleteId(null)
+    }
+  }
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('de-DE', {
@@ -53,10 +89,13 @@ export function HistoryPanel({
   if (!isOpen) return null
 
   return (
+    <>
     <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose}>
       <div
-        className="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-xl"
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-xl transition-transform"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
@@ -107,7 +146,7 @@ export function HistoryPanel({
                         className="shrink-0 text-muted-foreground hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation()
-                          onDeleteItem(item.id)
+                          setDeleteId(item.id)
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -121,5 +160,23 @@ export function HistoryPanel({
         </ScrollArea>
       </div>
     </div>
+
+    <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Analyse loeschen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Diese Aktion kann nicht rueckgaengig gemacht werden. Die Analyse wird dauerhaft geloescht.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+            Loeschen
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

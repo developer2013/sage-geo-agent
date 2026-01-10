@@ -66,6 +66,8 @@ export interface AnalysisResult {
   imageAnalysis?: ImageAnalysis | null
   ctaAnalysis?: CtaAnalysis | null
   tableAnalysis?: TableAnalysis | null
+  contentStats?: ContentStats | null
+  performanceMetrics?: PerformanceMetrics | null
   cached?: boolean
 }
 
@@ -74,4 +76,35 @@ export interface HistoryItem {
   url: string
   geoScore: number
   analyzedAt: string
+}
+
+export interface ContentStats {
+  wordCount: number
+  imageCount: number
+  imagesWithAlt: number
+  imagesWithoutAlt: number
+  internalLinks: number
+  externalLinks: number
+  headingStructure: {
+    h1: number
+    h2: number
+    h3: number
+    h4: number
+    h5: number
+    h6: number
+  }
+  listCount: number
+  tableCount: number
+  estimatedReadTime: number
+}
+
+export interface PerformanceMetrics {
+  estimatedLCP: 'fast' | 'moderate' | 'slow'
+  estimatedCLS: 'good' | 'needs-improvement' | 'poor'
+  contentSize: {
+    html: number
+    images: number
+    total: number
+  }
+  suggestions: string[]
 }

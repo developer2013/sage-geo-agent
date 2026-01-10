@@ -1,10 +1,48 @@
 import { useState } from 'react'
-import { Code, FileCode, Bot, FileText } from 'lucide-react'
+import { Code, FileCode, Bot, FileText, Copy, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import type { PageCode } from '@/types'
+
+interface CopyButtonProps {
+  text: string
+  label: string
+}
+
+function CopyButton({ text, label }: CopyButtonProps) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    if (!text) {
+      toast.error('Nichts zum Kopieren')
+      return
+    }
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    toast.success(`${label} kopiert!`)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleCopy}
+      className="h-8 px-2"
+    >
+      {copied ? (
+        <Check className="h-4 w-4 text-emerald-500" />
+      ) : (
+        <Copy className="h-4 w-4" />
+      )}
+      <span className="ml-1 hidden sm:inline">{copied ? 'Kopiert' : 'Kopieren'}</span>
+    </Button>
+  )
+}
 
 interface CodeViewerProps {
   pageCode: PageCode
@@ -46,10 +84,13 @@ export function CodeViewer({ pageCode }: CodeViewerProps) {
         <TabsContent value="html">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <FileCode className="h-4 w-4" />
-                HTML-Quellcode
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FileCode className="h-4 w-4" />
+                  HTML-Quellcode
+                </CardTitle>
+                <CopyButton text={pageCode.html} label="HTML" />
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[400px] w-full rounded-md border">
@@ -102,10 +143,18 @@ export function CodeViewer({ pageCode }: CodeViewerProps) {
         <TabsContent value="schema">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Schema.org / JSON-LD ({pageCode.schemaMarkup.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Schema.org / JSON-LD ({pageCode.schemaMarkup.length})
+                </CardTitle>
+                {pageCode.schemaMarkup.length > 0 && (
+                  <CopyButton
+                    text={JSON.stringify(pageCode.schemaMarkup, null, 2)}
+                    label="Schema"
+                  />
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[400px] w-full rounded-md border">
@@ -126,10 +175,15 @@ export function CodeViewer({ pageCode }: CodeViewerProps) {
         <TabsContent value="robots">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Bot className="h-4 w-4" />
-                robots.txt
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Bot className="h-4 w-4" />
+                  robots.txt
+                </CardTitle>
+                {pageCode.robotsTxt && (
+                  <CopyButton text={pageCode.robotsTxt} label="robots.txt" />
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[400px] w-full rounded-md border">

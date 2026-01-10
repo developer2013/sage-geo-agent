@@ -7,7 +7,9 @@ import { HistoryPanel } from '@/components/HistoryPanel'
 import { LoadingAnimation } from '@/components/LoadingAnimation'
 import { ChatPanel } from '@/components/ChatPanel'
 import { Card, CardContent } from '@/components/ui/card'
+import { Toaster } from '@/components/ui/sonner'
 import { Sparkles } from 'lucide-react'
+import { toast } from 'sonner'
 import type { AnalysisResult as AnalysisResultType, HistoryItem } from '@/types'
 
 // Always use relative URLs - Vite proxy handles /api in dev mode
@@ -101,6 +103,9 @@ function App() {
               } else if (event.type === 'complete') {
                 setResult(event.analysis)
                 loadHistory()
+                toast.success('Analyse abgeschlossen!', {
+                  description: `GEO-Score: ${event.analysis.geoScore}/100`
+                })
               } else if (event.type === 'error') {
                 throw new Error(event.error)
               }
@@ -115,7 +120,9 @@ function App() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ein unerwarteter Fehler ist aufgetreten.')
+      const errorMessage = err instanceof Error ? err.message : 'Ein unerwarteter Fehler ist aufgetreten.'
+      setError(errorMessage)
+      toast.error('Analyse fehlgeschlagen', { description: errorMessage })
     } finally {
       setIsLoading(false)
       setProgress(null)
@@ -157,7 +164,7 @@ function App() {
         onToggleDarkMode={toggleDarkMode}
       />
 
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-5xl">
         <div className="space-y-6">
           <UrlInput onAnalyze={handleAnalyze} isLoading={isLoading} />
 
@@ -210,6 +217,8 @@ function App() {
         onSelectItem={handleSelectHistoryItem}
         onDeleteItem={handleDeleteHistoryItem}
       />
+
+      <Toaster />
     </div>
   )
 }
