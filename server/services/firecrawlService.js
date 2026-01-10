@@ -28,22 +28,11 @@ export async function scrapeWithFirecrawl(url) {
       formats: ['markdown', 'html', 'screenshot', 'links'],
       onlyMainContent: false,
       waitFor: 3000,
-      screenshot: true, // Explicitly request screenshot
     })
-
-    // Debug screenshot data
-    const doc = result?.data || result
-    if (doc?.screenshot) {
-      console.log(`[Firecrawl] Screenshot received: ${typeof doc.screenshot}, length: ${String(doc.screenshot).length}`)
-      console.log(`[Firecrawl] Screenshot preview: ${String(doc.screenshot).substring(0, 80)}...`)
-    } else {
-      console.log(`[Firecrawl] No screenshot in response`)
-    }
 
     console.log(`[Firecrawl] Result keys:`, Object.keys(result || {}))
 
     // Handle different response formats from Firecrawl SDK
-    // The SDK may return the document directly or wrap it in a response object
     const doc = result?.data || result
 
     if (!doc || (!doc.html && !doc.markdown)) {
@@ -51,12 +40,47 @@ export async function scrapeWithFirecrawl(url) {
       throw new Error(result?.error || 'Firecrawl returned empty response')
     }
 
+    // Handle screenshot - Firecrawl returns a URL, we need to download it as base64
+    let screenshotBase64 = null
+    if (doc.screenshot) {
+      console.log(`[Firecrawl] Screenshot URL received: ${doc.screenshot.substring(0, 80)}...`)
+
+      // If it's a URL, download and convert to base64
+      if (doc.screenshot.startsWith('http')) {
+        try {
+          console.log(`[Firecrawl] Downloading screenshot from URL...`)
+          const screenshotResponse = await fetch(doc.screenshot, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+              'Accept': 'image/*',
+            }
+          })
+
+          if (screenshotResponse.ok) {
+            const arrayBuffer = await screenshotResponse.arrayBuffer()
+            screenshotBase64 = Buffer.from(arrayBuffer).toString('base64')
+            console.log(`[Firecrawl] Screenshot downloaded, base64 length: ${screenshotBase64.length}`)
+          } else {
+            console.log(`[Firecrawl] Failed to download screenshot: ${screenshotResponse.status}`)
+          }
+        } catch (err) {
+          console.log(`[Firecrawl] Error downloading screenshot: ${err.message}`)
+        }
+      } else {
+        // Already base64
+        screenshotBase64 = doc.screenshot
+        console.log(`[Firecrawl] Screenshot already base64, length: ${screenshotBase64.length}`)
+      }
+    } else {
+      console.log(`[Firecrawl] No screenshot in response`)
+    }
+
     console.log(`[Firecrawl] Successfully scraped: ${url}`)
 
     return {
       html: doc.html || '',
       markdown: doc.markdown || '',
-      screenshot: doc.screenshot || null,
+      screenshot: screenshotBase64,
       links: doc.links || [],
       metadata: doc.metadata || {},
       success: true
