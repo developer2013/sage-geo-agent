@@ -426,7 +426,7 @@ Füge deine Bildanalyse in das "imageAnalysis" Feld der JSON-Antwort ein.`
   }
 
   const message = await client.messages.create({
-    model: 'claude-opus-4-5-20250514',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 8192,
     messages: [
       {

@@ -79,14 +79,11 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
 
   if (!isExpanded) {
     return (
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+      <Card className="neu-card hover:shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] transition-all duration-300 cursor-pointer" onClick={() => setIsExpanded(true)}>
         <CardContent className="py-4">
-          <button
-            onClick={() => setIsExpanded(true)}
-            className="w-full flex items-center justify-between group"
-          >
+          <div className="w-full flex items-center justify-between group">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
+              <div className="neu-icon">
                 <MessageCircle className="h-5 w-5 text-primary" />
               </div>
               <div className="text-left">
@@ -96,23 +93,25 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
                 </p>
               </div>
             </div>
-            <Sparkles className="h-5 w-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-          </button>
+            <Sparkles className="h-5 w-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity animate-pulse-glow" />
+          </div>
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="border-primary/20">
+    <Card className="neu-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <MessageCircle className="h-5 w-5 text-primary" />
+            <div className="neu-icon p-2">
+              <MessageCircle className="h-4 w-4 text-primary" />
+            </div>
             Chat mit Claude
           </CardTitle>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => setIsExpanded(false)}
           >
@@ -134,7 +133,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
                     <button
                       key={index}
                       onClick={() => setInput(question)}
-                      className="text-left text-sm p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                      className="text-left text-sm p-3 rounded-xl bg-background shadow-[3px_3px_6px_var(--shadow-dark),-3px_-3px_6px_var(--shadow-light)] hover:shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)] transition-all duration-200"
                     >
                       {question}
                     </button>
@@ -151,21 +150,21 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
                 }`}
               >
                 {message.role === 'assistant' && (
-                  <div className="p-2 rounded-full bg-primary/10 h-fit">
+                  <div className="neu-icon p-2 h-fit">
                     <Bot className="h-4 w-4 text-primary" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] p-3 rounded-lg ${
+                  className={`max-w-[80%] p-3 rounded-xl ${
                     message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                      ? 'bg-primary text-primary-foreground shadow-[3px_3px_6px_var(--shadow-dark),-3px_-3px_6px_var(--shadow-light)]'
+                      : 'bg-background shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 </div>
                 {message.role === 'user' && (
-                  <div className="p-2 rounded-full bg-muted h-fit">
+                  <div className="neu-icon p-2 h-fit">
                     <User className="h-4 w-4" />
                   </div>
                 )}
@@ -174,11 +173,11 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
 
             {isLoading && (
               <div className="flex gap-3">
-                <div className="p-2 rounded-full bg-primary/10 h-fit">
+                <div className="neu-icon p-2 h-fit animate-pulse">
                   <Bot className="h-4 w-4 text-primary" />
                 </div>
-                <div className="bg-muted p-3 rounded-lg">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="bg-background p-3 rounded-xl shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 </div>
               </div>
             )}
@@ -186,7 +185,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
         </ScrollArea>
 
         {/* Input */}
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Input
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -195,7 +194,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
             disabled={isLoading}
             className="flex-1"
           />
-          <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
+          <Button onClick={handleSend} disabled={isLoading || !input.trim()} size="icon">
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

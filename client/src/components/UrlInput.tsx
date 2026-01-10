@@ -24,21 +24,23 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
   }
 
   return (
-    <Card className="w-full">
+    <Card className="neu-card w-full">
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="flex gap-3">
+        <form onSubmit={handleSubmit} className="flex gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 neu-icon p-1.5">
+              <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
             <Input
               type="text"
               placeholder="URL eingeben (z.B. example.com)"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="pl-10"
+              className="pl-14"
               disabled={isLoading}
             />
           </div>
-          <Button type="submit" disabled={isLoading || !url.trim()}>
+          <Button type="submit" disabled={isLoading || !url.trim()} size="lg">
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -49,7 +51,7 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
             )}
           </Button>
         </form>
-        <p className="text-xs text-muted-foreground mt-3">
+        <p className="text-xs text-muted-foreground mt-4">
           Gib eine URL ein, um die GEO-Tauglichkeit zu analysieren. Die Analyse prueft Schema Markup, Meta-Tags, Struktur und mehr.
         </p>
       </CardContent>

@@ -54,52 +54,52 @@ export function LoadingAnimation({ isLoading }: LoadingAnimationProps) {
   const CurrentIcon = steps[currentStep]?.icon || Brain
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+    <Card className="neu-card">
       <CardContent className="py-8">
         <div className="flex flex-col items-center space-y-6">
-          {/* Animated Icon */}
+          {/* Animated Icon with Neumorphism */}
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-            <div className="relative p-4 rounded-full bg-primary/10">
-              <CurrentIcon className="h-8 w-8 text-primary animate-pulse" />
+            <div className="neu-icon relative animate-float">
+              <CurrentIcon className="h-8 w-8 text-primary" />
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="w-full max-w-md space-y-2">
+          {/* Progress Bar with Neumorphism */}
+          <div className="w-full max-w-md space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground font-medium">
                 {steps[currentStep]?.text}
               </span>
-              <span className="font-mono font-semibold text-primary">
+              <span className="font-mono font-bold text-primary">
                 {Math.round(progress)}%
               </span>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="neu-progress">
               <div
-                className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-300 ease-out"
+                className="neu-progress-bar"
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
 
-          {/* Step Indicators */}
-          <div className="flex items-center gap-2">
+          {/* Step Indicators with Neumorphism */}
+          <div className="flex items-center gap-3">
             {steps.map((_, index) => (
               <div
                 key={index}
-                className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                className={`h-3 w-3 rounded-full transition-all duration-300 ${
                   index <= currentStep
-                    ? 'bg-primary scale-100'
-                    : 'bg-muted scale-75'
+                    ? 'bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]'
+                    : 'bg-background shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]'
                 }`}
               />
             ))}
           </div>
 
-          {/* Spinner */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
+          {/* Spinner Badge */}
+          <div className="neu-badge flex items-center gap-2 text-sm text-muted-foreground px-4 py-2">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
             <span>GEO-Analyse laeuft...</span>
           </div>
         </div>

@@ -126,16 +126,18 @@ function App() {
           )}
 
           {!result && !isLoading && !error && (
-            <Card className="border-dashed">
+            <Card className="neu-card">
               <CardContent className="py-12">
                 <div className="flex flex-col items-center text-center">
-                  <div className="p-4 rounded-full bg-primary/10 mb-4">
-                    <Sparkles className="h-8 w-8 text-primary" />
+                  <div className="neu-score p-1 mb-6">
+                    <div className="neu-score-inner p-5">
+                      <Sparkles className="h-10 w-10 text-primary animate-pulse-glow" />
+                    </div>
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">
+                  <h3 className="text-xl font-semibold mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     Bereit zur Analyse
                   </h3>
-                  <p className="text-muted-foreground max-w-md">
+                  <p className="text-muted-foreground max-w-md leading-relaxed">
                     Gib oben eine URL ein, um die GEO-Tauglichkeit deiner Webseite
                     zu analysieren. Du erhaeltst einen detaillierten Bericht mit
                     Staerken, Schwaechen und konkreten Handlungsempfehlungen.
