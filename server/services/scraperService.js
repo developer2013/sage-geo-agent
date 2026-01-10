@@ -1,4 +1,11 @@
 import * as cheerio from 'cheerio'
+import {
+  scrapeWithFirecrawl,
+  getRobotsTxt,
+  extractImageUrls,
+  fetchImagesAsBase64,
+  isFirecrawlAvailable
+} from './firecrawlService.js'
 
 // Helper function to create browser-like headers
 function getBrowserHeaders(url, withReferer = false) {
@@ -27,80 +34,156 @@ function getBrowserHeaders(url, withReferer = false) {
   return headers
 }
 
-export async function fetchPageContent(url) {
-  try {
-    // First attempt without Referer
-    let response = await fetch(url, {
-      headers: getBrowserHeaders(url, false),
+/**
+ * Fallback scraper using native fetch
+ */
+async function fetchPageContentFallback(url) {
+  console.log('[Scraper] Using fallback scraper...')
+
+  let response = await fetch(url, {
+    headers: getBrowserHeaders(url, false),
+    redirect: 'follow',
+  })
+
+  if (response.status === 403) {
+    console.log('Got 403, retrying with Referer header...')
+    response = await fetch(url, {
+      headers: getBrowserHeaders(url, true),
       redirect: 'follow',
     })
+  }
 
-    // If 403, try again with Referer header
+  if (!response.ok) {
     if (response.status === 403) {
-      console.log('Got 403, retrying with Referer header...')
-      response = await fetch(url, {
-        headers: getBrowserHeaders(url, true),
-        redirect: 'follow',
-      })
+      throw new Error(`Die Website blockiert automatisierte Anfragen (403 Forbidden). Diese Seite hat einen Bot-Schutz aktiviert (z.B. Cloudflare, Akamai). Bitte versuche eine andere URL ohne starken Bot-Schutz.`)
     }
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
 
-    if (!response.ok) {
-      if (response.status === 403) {
-        throw new Error(`Die Website blockiert automatisierte Anfragen (403 Forbidden). Diese Seite hat einen Bot-Schutz aktiviert (z.B. Cloudflare, Akamai). Bitte versuche eine andere URL ohne starken Bot-Schutz.`)
-      }
-      throw new Error(`HTTP error! status: ${response.status}`)
+  const html = await response.text()
+  const $ = cheerio.load(html)
+
+  const metaTags = []
+  $('meta').each((_, el) => {
+    const name = $(el).attr('name')
+    const property = $(el).attr('property')
+    const content = $(el).attr('content')
+
+    if (content && (name || property)) {
+      metaTags.push({ name, property, content })
     }
+  })
 
-    const html = await response.text()
-    const $ = cheerio.load(html)
-
-    // Extract meta tags
-    const metaTags = []
-    $('meta').each((_, el) => {
-      const name = $(el).attr('name')
-      const property = $(el).attr('property')
-      const content = $(el).attr('content')
-
-      if (content && (name || property)) {
-        metaTags.push({ name, property, content })
-      }
-    })
-
-    // Extract JSON-LD schema markup
-    const schemaMarkup = []
-    $('script[type="application/ld+json"]').each((_, el) => {
-      try {
-        const json = JSON.parse($(el).html())
-        schemaMarkup.push(json)
-      } catch (e) {
-        // Invalid JSON, skip
-      }
-    })
-
-    // Try to fetch robots.txt
-    let robotsTxt = null
+  const schemaMarkup = []
+  $('script[type="application/ld+json"]').each((_, el) => {
     try {
-      const urlObj = new URL(url)
-      const robotsUrl = `${urlObj.protocol}//${urlObj.host}/robots.txt`
-      const robotsResponse = await fetch(robotsUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/plain,*/*',
-        },
-      })
-
-      if (robotsResponse.ok) {
-        robotsTxt = await robotsResponse.text()
-      }
+      const json = JSON.parse($(el).html())
+      schemaMarkup.push(json)
     } catch (e) {
-      // robots.txt not available
+      // Invalid JSON, skip
+    }
+  })
+
+  let robotsTxt = null
+  try {
+    const urlObj = new URL(url)
+    const robotsUrl = `${urlObj.protocol}//${urlObj.host}/robots.txt`
+    const robotsResponse = await fetch(robotsUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/plain,*/*',
+      },
+    })
+
+    if (robotsResponse.ok) {
+      robotsTxt = await robotsResponse.text()
+    }
+  } catch (e) {
+    // robots.txt not available
+  }
+
+  return {
+    html,
+    metaTags,
+    schemaMarkup,
+    robotsTxt,
+    screenshot: null,
+    images: []
+  }
+}
+
+/**
+ * Primary function to fetch page content - uses Firecrawl with fallback
+ */
+export async function fetchPageContent(url) {
+  try {
+    // Try Firecrawl first if available
+    if (isFirecrawlAvailable()) {
+      try {
+        console.log('[Scraper] Using Firecrawl...')
+
+        // Scrape page with Firecrawl
+        const firecrawlResult = await scrapeWithFirecrawl(url)
+
+        // Get robots.txt separately
+        const robotsTxt = await getRobotsTxt(url)
+
+        // Parse HTML with cheerio for meta tags and schema
+        const $ = cheerio.load(firecrawlResult.html)
+
+        const metaTags = []
+        $('meta').each((_, el) => {
+          const name = $(el).attr('name')
+          const property = $(el).attr('property')
+          const content = $(el).attr('content')
+
+          if (content && (name || property)) {
+            metaTags.push({ name, property, content })
+          }
+        })
+
+        const schemaMarkup = []
+        $('script[type="application/ld+json"]').each((_, el) => {
+          try {
+            const json = JSON.parse($(el).html())
+            schemaMarkup.push(json)
+          } catch (e) {
+            // Invalid JSON, skip
+          }
+        })
+
+        // Extract and fetch images for analysis
+        const imageUrls = extractImageUrls(firecrawlResult.html, url)
+        console.log(`[Scraper] Found ${imageUrls.length} images on page`)
+
+        const images = await fetchImagesAsBase64(imageUrls, 5)
+        console.log(`[Scraper] Fetched ${images.length} images for analysis`)
+
+        return {
+          html: firecrawlResult.html,
+          markdown: firecrawlResult.markdown,
+          metaTags,
+          schemaMarkup,
+          robotsTxt,
+          screenshot: firecrawlResult.screenshot,
+          images,
+          metadata: firecrawlResult.metadata,
+          usedFirecrawl: true
+        }
+      } catch (firecrawlError) {
+        console.error('[Scraper] Firecrawl failed, falling back to native fetch:', firecrawlError.message)
+      }
+    } else {
+      console.log('[Scraper] Firecrawl not configured, using fallback scraper')
     }
 
+    // Fallback to native fetch
+    const fallbackResult = await fetchPageContentFallback(url)
     return {
-      html,
-      metaTags,
-      schemaMarkup,
-      robotsTxt
+      ...fallbackResult,
+      markdown: null,
+      metadata: null,
+      usedFirecrawl: false
     }
   } catch (error) {
     throw new Error(`Failed to fetch page: ${error.message}`)
@@ -249,6 +332,22 @@ export function extractTextContent(html) {
   // Word count
   const wordCount = bodyText.split(/\s+/).length
 
+  // Image analysis for alt-text quality
+  const imageAnalysis = {
+    total: $('img').length,
+    withAlt: $('img[alt]').filter((_, el) => $(el).attr('alt').trim().length > 0).length,
+    withoutAlt: 0,
+    altTexts: []
+  }
+  imageAnalysis.withoutAlt = imageAnalysis.total - imageAnalysis.withAlt
+
+  $('img[alt]').each((_, el) => {
+    const alt = $(el).attr('alt').trim()
+    if (alt.length > 0) {
+      imageAnalysis.altTexts.push(alt.substring(0, 100))
+    }
+  })
+
   // Content structure score elements
   const structureAnalysis = {
     hasLists: bulletLists > 0 || numberedLists > 0,
@@ -268,7 +367,8 @@ export function extractTextContent(html) {
     externalLinksCount: hasExternalLinks,
     hasRecentData: hasRecentYear,
     wordCount,
-    estimatedReadTime: Math.ceil(wordCount / 200)
+    estimatedReadTime: Math.ceil(wordCount / 200),
+    imageAnalysis
   }
 
   return {

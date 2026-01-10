@@ -41,7 +41,14 @@ router.post('/', async (req, res) => {
       weaknesses: analysisResult.weaknesses || [],
       recommendations: analysisResult.recommendations || [],
       nextStep: analysisResult.nextStep || '',
-      pageCode: pageCode
+      imageAnalysis: analysisResult.imageAnalysis || null,
+      pageCode: {
+        html: pageCode.html,
+        metaTags: pageCode.metaTags,
+        schemaMarkup: pageCode.schemaMarkup,
+        robotsTxt: pageCode.robotsTxt,
+        usedFirecrawl: pageCode.usedFirecrawl || false
+      }
     }
 
     // Save to database

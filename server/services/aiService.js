@@ -83,6 +83,22 @@ GEO ist der strategische Prozess, Inhalte so zu gestalten, dass sie von KI-Syste
 - Nutzt Google-Index
 - Bestehende Top-Rankings werden priorisiert
 
+## Bildanalyse für GEO
+
+Analysiere auch die visuellen Elemente der Seite (falls Screenshot/Bilder vorhanden):
+- Text in Bildern/Grafiken (wichtig für Accessibility und AI-Lesbarkeit)
+- Infografiken mit Statistiken
+- UI-Elemente und deren Beschriftungen
+- Alt-Texte prüfen ob vorhanden und aussagekräftig
+
+### Bildbasierte GEO-Faktoren:
+- Bilder ohne Alt-Text: -5 Punkte (pro Bild bis max -15)
+- Wichtige Infos NUR in Bildern ohne Text-Alternative: -10
+- Gute Alt-Texte mit Keywords: +3
+- Infografiken mit zugänglichen Daten: +5
+- Text in Bildern der auch im HTML steht: Neutral
+- Wichtige Statistiken nur als Grafik: -5
+
 ## ANTWORTFORMAT (STRIKT JSON!)
 
 Gib NUR dieses JSON zurück, KEIN anderer Text:
@@ -99,7 +115,13 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
   "recommendations": [
     {"timeframe": "SOFORT|KURZFRISTIG|MITTELFRISTIG", "action": "<Konkrete Maßnahme>", "reason": "<Begründung mit Fakten>"}
   ],
-  "nextStep": "<Ein sofort umsetzbarer Schritt>"
+  "nextStep": "<Ein sofort umsetzbarer Schritt>",
+  "imageAnalysis": {
+    "hasVisualContent": <true|false>,
+    "textInImages": "<Erkannter Text aus Bildern/Grafiken>",
+    "accessibilityIssues": ["<Liste von Accessibility-Problemen>"],
+    "recommendations": ["<Bild-spezifische Empfehlungen>"]
+  }
 }
 
 ## Detaillierte Bewertungskriterien (100 Punkte)
@@ -142,6 +164,7 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
 - Kein Autor erkennbar: -5
 - Veraltete Inhalte (keine 2024/2025 Referenzen): -5
 - Keyword Stuffing erkennbar: -10
+- Wichtige Infos nur in Bildern: -10
 
 ## KI-Crawler (robots.txt Check)
 Erlaubt sein sollten:
@@ -182,6 +205,23 @@ export async function analyzeWithClaude(url, pageContent, pageCode) {
       }
     })
   }
+
+  // Build image analysis section
+  const imgAnalysis = textContent.structureAnalysis.imageAnalysis
+  const imageAnalysisSection = imgAnalysis
+    ? `
+═══════════════════════════════════════════
+BILD-ANALYSE (Alt-Texte)
+═══════════════════════════════════════════
+
+**Bilder gesamt:** ${imgAnalysis.total || 0}
+**Mit Alt-Text:** ${imgAnalysis.withAlt || 0}
+**Ohne Alt-Text:** ${imgAnalysis.withoutAlt || 0}
+
+**Vorhandene Alt-Texte:**
+${imgAnalysis.altTexts?.slice(0, 10).map(alt => `- "${alt}"`).join('\n') || 'Keine Alt-Texte gefunden'}
+`
+    : ''
 
   const userMessage = `Analysiere diese Webseite für GEO (Generative Engine Optimization):
 
@@ -255,6 +295,8 @@ ${pageCode.robotsTxt ? pageCode.robotsTxt.substring(0, 800) : 'Keine robots.txt 
 - Blockiert: ${blockedCrawlers.length > 0 ? blockedCrawlers.join(', ') : 'Keine'}
 - Erlaubt/Nicht blockiert: ${allowedCrawlers.length > 0 ? allowedCrawlers.join(', ') : 'Keine Angabe'}
 
+${imageAnalysisSection}
+
 ═══════════════════════════════════════════
 FAQ-ELEMENTE (${textContent.faqItems.length} gefunden)
 ═══════════════════════════════════════════
@@ -270,13 +312,70 @@ ${textContent.bodyText.substring(0, 3000)}
 Analysiere diese Daten und gib deine Bewertung als REINES JSON zurück (kein Markdown, kein Text davor/danach).
 Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert werden sollten, fehlende Elemente, etc.`
 
+  // Build message content array
+  const messageContent = []
+
+  // Add screenshot if available (from Firecrawl)
+  if (pageCode.screenshot) {
+    console.log('[AI] Adding screenshot to analysis...')
+    messageContent.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: 'image/png',
+        data: pageCode.screenshot,
+      },
+    })
+  }
+
+  // Add individual images if available
+  if (pageCode.images && pageCode.images.length > 0) {
+    console.log(`[AI] Adding ${pageCode.images.length} images to analysis...`)
+    for (const img of pageCode.images.slice(0, 3)) { // Limit to 3 images
+      if (img.base64 && img.mediaType) {
+        messageContent.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.mediaType,
+            data: img.base64,
+          },
+        })
+      }
+    }
+  }
+
+  // Add text content
+  messageContent.push({
+    type: 'text',
+    text: userMessage,
+  })
+
+  // Add image analysis instructions if we have visual content
+  if (pageCode.screenshot || (pageCode.images && pageCode.images.length > 0)) {
+    messageContent.push({
+      type: 'text',
+      text: `
+
+WICHTIG - BILDANALYSE:
+Du siehst oben einen Screenshot der Webseite und/oder einzelne Bilder. Bitte analysiere:
+1. Welcher Text ist in den Bildern/Grafiken sichtbar?
+2. Gibt es Infografiken mit wichtigen Statistiken?
+3. Sind UI-Elemente gut beschriftet?
+4. Welche wichtigen Informationen sind NUR als Bild vorhanden (nicht im HTML)?
+5. Gibt es Accessibility-Probleme bei der Bildnutzung?
+
+Füge deine Bildanalyse in das "imageAnalysis" Feld der JSON-Antwort ein.`
+    })
+  }
+
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
+    model: 'claude-opus-4-5-20250514',
+    max_tokens: 8192,
     messages: [
       {
         role: 'user',
-        content: userMessage
+        content: messageContent,
       }
     ],
     system: SYSTEM_PROMPT,
