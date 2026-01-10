@@ -31,6 +31,23 @@ export function initDatabase() {
     ON analyses(analyzed_at DESC)
   `).run()
 
+  // Chat messages table
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      analysis_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (analysis_id) REFERENCES analyses(id) ON DELETE CASCADE
+    )
+  `).run()
+
+  db.prepare(`
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_analysis_id
+    ON chat_messages(analysis_id)
+  `).run()
+
   console.log('Database initialized')
   return db
 }
@@ -102,7 +119,37 @@ export function getAnalysisById(id) {
 
 export function deleteAnalysis(id) {
   const db = getDb()
+  // Delete chat messages first (cascade doesn't always work with SQLite)
+  db.prepare('DELETE FROM chat_messages WHERE analysis_id = ?').run(id)
   const stmt = db.prepare('DELETE FROM analyses WHERE id = ?')
   const result = stmt.run(id)
+  return result.changes > 0
+}
+
+// Chat message functions
+export function saveChatMessage(analysisId, role, content) {
+  const db = getDb()
+  const stmt = db.prepare(`
+    INSERT INTO chat_messages (analysis_id, role, content)
+    VALUES (?, ?, ?)
+  `)
+  stmt.run(analysisId, role, content)
+}
+
+export function getChatMessages(analysisId) {
+  const db = getDb()
+  const stmt = db.prepare(`
+    SELECT role, content, created_at as createdAt
+    FROM chat_messages
+    WHERE analysis_id = ?
+    ORDER BY id ASC
+  `)
+  return stmt.all(analysisId)
+}
+
+export function deleteChatMessages(analysisId) {
+  const db = getDb()
+  const stmt = db.prepare('DELETE FROM chat_messages WHERE analysis_id = ?')
+  const result = stmt.run(analysisId)
   return result.changes > 0
 }

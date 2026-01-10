@@ -1,5 +1,6 @@
 import express from 'express'
 import Anthropic from '@anthropic-ai/sdk'
+import { saveChatMessage, getChatMessages } from '../services/dbService.js'
 
 const router = express.Router()
 
@@ -20,13 +21,33 @@ Deine Aufgaben:
 
 Antworte immer auf Deutsch, freundlich und hilfreich. Halte deine Antworten praegnant (max. 2-3 Absaetze).`
 
+// Get chat history for an analysis
+router.get('/:analysisId', async (req, res) => {
+  try {
+    const { analysisId } = req.params
+    const messages = getChatMessages(analysisId)
+    res.json({ messages })
+  } catch (error) {
+    console.error('Error getting chat history:', error)
+    res.status(500).json({ error: 'Konnte Chat-Verlauf nicht laden' })
+  }
+})
+
+// Send a chat message
 router.post('/', async (req, res) => {
   try {
-    const { message, context, history = [] } = req.body
+    const { message, analysisId, context, history = [] } = req.body
 
     if (!message) {
       return res.status(400).json({ error: 'Nachricht ist erforderlich' })
     }
+
+    if (!analysisId) {
+      return res.status(400).json({ error: 'Analyse-ID ist erforderlich' })
+    }
+
+    // Save user message to database
+    saveChatMessage(analysisId, 'user', message)
 
     // Build context message
     const contextMessage = `
@@ -73,6 +94,9 @@ ${context.recommendations?.map(r => `- [${r.timeframe}] ${r.action}: ${r.reason}
     })
 
     const assistantMessage = response.content[0].text
+
+    // Save assistant message to database
+    saveChatMessage(analysisId, 'assistant', assistantMessage)
 
     res.json({ response: assistantMessage })
   } catch (error) {

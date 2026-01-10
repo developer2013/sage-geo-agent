@@ -21,7 +21,33 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Load chat history when analysis changes
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!analysis?.id) return
+
+      setIsLoadingHistory(true)
+      try {
+        const response = await axios.get(`/api/chat/${analysis.id}`)
+        if (response.data.messages && response.data.messages.length > 0) {
+          setMessages(response.data.messages)
+          setIsExpanded(true) // Auto-expand if there's chat history
+        } else {
+          setMessages([])
+        }
+      } catch (err) {
+        console.error('Error loading chat history:', err)
+        setMessages([])
+      } finally {
+        setIsLoadingHistory(false)
+      }
+    }
+
+    loadChatHistory()
+  }, [analysis?.id])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -84,12 +110,25 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
           <div className="w-full flex items-center justify-between group">
             <div className="flex items-center gap-3">
               <div className="neu-icon">
-                <MessageCircle className="h-5 w-5 text-primary" />
+                {isLoadingHistory ? (
+                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                ) : (
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                )}
               </div>
               <div className="text-left">
-                <h3 className="font-semibold">Mit Claude chatten</h3>
+                <h3 className="font-semibold">
+                  Mit Claude chatten
+                  {messages.length > 0 && (
+                    <span className="ml-2 text-xs text-primary">
+                      ({messages.length} Nachrichten)
+                    </span>
+                  )}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Stelle Fragen zur Analyse und erhalte personalisierte Tipps
+                  {messages.length > 0
+                    ? 'Setze die Unterhaltung fort'
+                    : 'Stelle Fragen zur Analyse und erhalte personalisierte Tipps'}
                 </p>
               </div>
             </div>
