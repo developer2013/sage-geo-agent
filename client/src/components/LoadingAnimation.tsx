@@ -2,56 +2,77 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Loader2, Globe, Search, Brain, FileText } from 'lucide-react'
 
-interface LoadingAnimationProps {
-  isLoading: boolean
+interface ProgressInfo {
+  step: number
+  message: string
 }
 
-const steps = [
+interface LoadingAnimationProps {
+  isLoading: boolean
+  progress?: ProgressInfo | null
+}
+
+const defaultSteps = [
   { icon: Globe, text: 'Verbinde mit Webseite...', duration: 2000 },
   { icon: Search, text: 'Scanne Inhalte mit Firecrawl...', duration: 3000 },
   { icon: FileText, text: 'Extrahiere Struktur & Bilder...', duration: 2000 },
   { icon: Brain, text: 'Analysiere mit Claude Opus 4.5...', duration: 8000 },
 ]
 
-export function LoadingAnimation({ isLoading }: LoadingAnimationProps) {
-  const [progress, setProgress] = useState(0)
-  const [currentStep, setCurrentStep] = useState(0)
+export function LoadingAnimation({ isLoading, progress }: LoadingAnimationProps) {
+  const [animatedProgress, setAnimatedProgress] = useState(0)
+  const [fallbackStep, setFallbackStep] = useState(0)
+
+  // Use server progress if available, otherwise use animated fallback
+  const currentStep = progress?.step ?? fallbackStep
+  const currentMessage = progress?.message ?? defaultSteps[fallbackStep]?.text ?? 'Analysiere...'
 
   useEffect(() => {
     if (!isLoading) {
-      setProgress(0)
-      setCurrentStep(0)
+      setAnimatedProgress(0)
+      setFallbackStep(0)
       return
     }
 
-    // Calculate total duration and step thresholds
-    const totalDuration = steps.reduce((acc, step) => acc + step.duration, 0)
+    // If we have server progress, animate to that step's percentage
+    if (progress) {
+      const targetProgress = Math.min(95, (progress.step + 1) * 25)
+      const interval = setInterval(() => {
+        setAnimatedProgress(prev => {
+          if (prev < targetProgress) {
+            return Math.min(prev + 3, targetProgress)
+          }
+          return prev
+        })
+      }, 50)
+      return () => clearInterval(interval)
+    }
+
+    // Fallback animation when no server progress
+    const totalDuration = defaultSteps.reduce((acc, step) => acc + step.duration, 0)
     let elapsed = 0
 
     const interval = setInterval(() => {
       elapsed += 100
-
-      // Calculate progress percentage (cap at 95% until complete)
       const newProgress = Math.min(95, (elapsed / totalDuration) * 100)
-      setProgress(newProgress)
+      setAnimatedProgress(newProgress)
 
-      // Determine current step
       let stepTime = 0
-      for (let i = 0; i < steps.length; i++) {
-        stepTime += steps[i].duration
+      for (let i = 0; i < defaultSteps.length; i++) {
+        stepTime += defaultSteps[i].duration
         if (elapsed < stepTime) {
-          setCurrentStep(i)
+          setFallbackStep(i)
           break
         }
       }
     }, 100)
 
     return () => clearInterval(interval)
-  }, [isLoading])
+  }, [isLoading, progress])
 
   if (!isLoading) return null
 
-  const CurrentIcon = steps[currentStep]?.icon || Brain
+  const CurrentIcon = defaultSteps[Math.min(currentStep, defaultSteps.length - 1)]?.icon || Brain
 
   return (
     <Card className="neu-card">
@@ -69,23 +90,23 @@ export function LoadingAnimation({ isLoading }: LoadingAnimationProps) {
           <div className="w-full max-w-md space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground font-medium">
-                {steps[currentStep]?.text}
+                {currentMessage}
               </span>
               <span className="font-mono font-bold text-primary">
-                {Math.round(progress)}%
+                {Math.round(animatedProgress)}%
               </span>
             </div>
             <div className="neu-progress">
               <div
                 className="neu-progress-bar"
-                style={{ width: `${progress}%` }}
+                style={{ width: `${animatedProgress}%` }}
               />
             </div>
           </div>
 
           {/* Step Indicators with Neumorphism */}
           <div className="flex items-center gap-3">
-            {steps.map((_, index) => (
+            {defaultSteps.map((_, index) => (
               <div
                 key={index}
                 className={`h-3 w-3 rounded-full transition-all duration-300 ${
