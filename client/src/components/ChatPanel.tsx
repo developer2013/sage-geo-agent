@@ -165,13 +165,12 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
     }
   }
 
-  // Generate dynamic questions based on weaknesses
+  // Generate dynamic questions based on weaknesses and new tools
   const generateSuggestedQuestions = () => {
     const questions: string[] = []
 
     // Add questions based on critical weaknesses
     const criticalWeaknesses = analysis.weaknesses?.filter(w => w.priority === 'KRITISCH') || []
-    const mediumWeaknesses = analysis.weaknesses?.filter(w => w.priority === 'MITTEL') || []
 
     if (criticalWeaknesses.length > 0) {
       const firstCritical = criticalWeaknesses[0]
@@ -183,7 +182,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
       w.title.toLowerCase().includes('schema') || w.description.toLowerCase().includes('schema')
     )
     if (hasNoSchema) {
-      questions.push('Zeig mir ein Schema Markup Beispiel')
+      questions.push('Generiere Schema Markup für diese Seite')
     }
 
     const hasNoCTA = analysis.ctaAnalysis?.ctaQuality === 'SCHLECHT' || !analysis.ctaAnalysis?.primaryCta
@@ -191,22 +190,23 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
       questions.push('Wie gestalte ich bessere CTAs?')
     }
 
-    const hasNoStats = analysis.weaknesses?.some(w =>
-      w.title.toLowerCase().includes('statistik') || w.description.toLowerCase().includes('statistik')
-    )
-    if (hasNoStats) {
-      questions.push('Welche Statistiken sollte ich hinzufügen?')
+    // Try to extract domain/keyword for competitor search
+    try {
+      const domain = new URL(analysis.url).hostname.replace('www.', '')
+      const domainParts = domain.split('.')
+      if (domainParts.length > 1 && questions.length < 3) {
+        questions.push(`Finde Konkurrenten für ${domainParts[0]}`)
+      }
+    } catch {
+      // Fallback if URL parsing fails
+      if (questions.length < 3) {
+        questions.push('Finde meine Konkurrenten')
+      }
     }
 
-    // Add general questions if we don't have enough
-    if (questions.length < 2) {
-      questions.push('Wie kann ich den Score verbessern?')
-    }
-    if (questions.length < 3) {
-      questions.push('Vergleiche mit einem Konkurrenten')
-    }
-    if (questions.length < 4 && mediumWeaknesses.length > 0) {
-      questions.push(`Was ist mit: ${mediumWeaknesses[0].title}?`)
+    // Add sitemap analysis suggestion
+    if (questions.length < 4) {
+      questions.push('Analysiere meine Sitemap')
     }
 
     // Ensure max 4 questions
@@ -240,7 +240,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
                 <p className="text-sm text-muted-foreground">
                   {messages.length > 0
                     ? 'Setze die Unterhaltung fort'
-                    : 'Frag nach URLs, vergleiche Seiten, erhalte GEO-Tipps'}
+                    : 'Suche Konkurrenten, analysiere Sitemaps, generiere Schema Markup'}
                 </p>
               </div>
             </div>
@@ -277,7 +277,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
             {messages.length === 0 && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Claude kann beliebige Webseiten abrufen und analysieren. Frag nach URLs, vergleiche Konkurrenten, oder lass dir GEO-Tipps geben.
+                  Claude kann Webseiten abrufen, Konkurrenten suchen, Sitemaps analysieren und Schema Markup generieren.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {suggestedQuestions.map((question, index) => (
@@ -332,7 +332,15 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
                   {currentTool && (
                     <div className="flex items-center gap-2 text-sm text-primary mb-2">
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      <span>Rufe {currentTool === 'fetch_webpage' ? 'Webseite' : 'Daten'} ab...</span>
+                      <span>
+                        {currentTool === 'fetch_webpage' && 'Lade Webseite...'}
+                        {currentTool === 'compare_pages' && 'Vergleiche 2 Seiten...'}
+                        {currentTool === 'compare_multiple' && 'Vergleiche mehrere Seiten...'}
+                        {currentTool === 'search_competitors' && 'Suche Konkurrenten...'}
+                        {currentTool === 'generate_schema_markup' && 'Bereite Schema vor...'}
+                        {currentTool === 'analyze_sitemap' && 'Analysiere Sitemap...'}
+                        {!['fetch_webpage', 'compare_pages', 'compare_multiple', 'search_competitors', 'generate_schema_markup', 'analyze_sitemap'].includes(currentTool) && 'Verarbeite...'}
+                      </span>
                     </div>
                   )}
                   {streamingContent ? (

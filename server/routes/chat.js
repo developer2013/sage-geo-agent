@@ -1,7 +1,7 @@
 import express from 'express'
 import Anthropic from '@anthropic-ai/sdk'
 import { saveChatMessage, getChatMessages } from '../services/dbService.js'
-import { scrapeWithFirecrawl, isFirecrawlAvailable } from '../services/firecrawlService.js'
+import { scrapeWithFirecrawl, isFirecrawlAvailable, searchWithFirecrawl, fetchSitemap } from '../services/firecrawlService.js'
 
 const router = express.Router()
 
@@ -42,35 +42,126 @@ const tools = [
       },
       required: ['url1', 'url2']
     }
+  },
+  {
+    name: 'compare_multiple',
+    description: 'Vergleicht mehrere Webseiten (3+) miteinander für einen umfassenden Wettbewerbsvergleich. Nutze dieses Tool wenn der Nutzer mehr als 2 Seiten vergleichen möchte.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        urls: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Liste von URLs zum Vergleich (mind. 2, max. 5)'
+        }
+      },
+      required: ['urls']
+    }
+  },
+  {
+    name: 'search_competitors',
+    description: 'Sucht im Web nach Konkurrenten oder ähnlichen Seiten zu einem Thema/Keyword. Nutze dieses Tool wenn der Nutzer Wettbewerber finden möchte oder nach ähnlichen Seiten sucht.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Suchbegriff (z.B. "CRM Software Deutschland" oder "beste SEO Tools")'
+        },
+        limit: {
+          type: 'number',
+          description: 'Anzahl Ergebnisse (max 10, Standard: 5)'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'generate_schema_markup',
+    description: 'Generiert JSON-LD Schema Markup Vorschläge für eine Webseite. Holt den Seiteninhalt und ermöglicht dir dann, passendes Schema Markup zu generieren.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          description: 'URL der Seite (optional - nutzt aktuelle Analyse wenn leer)'
+        },
+        schema_type: {
+          type: 'string',
+          description: 'Schema-Typ: Article, FAQPage, HowTo, Product, Organization, LocalBusiness (Standard: auto)'
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'analyze_sitemap',
+    description: 'Lädt die Sitemap einer Website und analysiert ausgewählte URLs für GEO. Nutze dieses Tool wenn der Nutzer mehrere Seiten einer Domain prüfen möchte.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          description: 'Domain oder Sitemap-URL (z.B. example.com oder example.com/sitemap.xml)'
+        },
+        limit: {
+          type: 'number',
+          description: 'Max. Anzahl URLs zu analysieren (Standard: 5, max: 10)'
+        },
+        filter: {
+          type: 'string',
+          description: 'URL-Filter (z.B. "/blog/" für nur Blog-Seiten)'
+        }
+      },
+      required: ['url']
+    }
   }
 ]
 
-const CHAT_SYSTEM_PROMPT = `Du bist ein freundlicher GEO-Experte (Generative Engine Optimization) mit der Fähigkeit, Webseiten in Echtzeit abzurufen und zu analysieren.
+const CHAT_SYSTEM_PROMPT = `Du bist ein freundlicher GEO-Experte (Generative Engine Optimization) mit umfangreichen Fähigkeiten zur Webanalyse.
 
-## Deine Fähigkeiten:
-1. **Webseiten abrufen**: Du kannst jede URL mit dem fetch_webpage Tool laden und analysieren
-2. **Seiten vergleichen**: Du kannst zwei Seiten mit compare_pages vergleichen
-3. **GEO-Analyse**: Du kennst alle Best Practices für KI-Sichtbarkeit
+## Deine Tools:
 
-## Wann du Tools nutzen sollst:
-- Wenn der Nutzer eine URL erwähnt und Infos dazu möchte → fetch_webpage
-- Wenn der Nutzer "schau dir mal X an" sagt → fetch_webpage
-- Wenn der Nutzer zwei Seiten vergleichen will → compare_pages
-- Wenn der Nutzer nach dem aktuellen Stand einer Seite fragt → fetch_webpage
+### Einzelseiten:
+- **fetch_webpage** - Lädt eine einzelne URL und gibt den Inhalt zurück
+- **generate_schema_markup** - Holt Seiteninhalt für Schema-Markup-Generierung
+
+### Vergleiche:
+- **compare_pages** - Vergleicht genau 2 Seiten
+- **compare_multiple** - Vergleicht 3-5 Seiten gleichzeitig (ideal für Wettbewerbsanalyse)
+
+### Recherche:
+- **search_competitors** - Sucht im Web nach Konkurrenten zu einem Keyword/Thema
+- **analyze_sitemap** - Lädt Sitemap und analysiert mehrere URLs einer Domain
+
+## Wann welches Tool:
+- URL-Analyse → fetch_webpage
+- "Schau dir X an" → fetch_webpage
+- 2 Seiten vergleichen → compare_pages
+- 3+ Seiten vergleichen → compare_multiple
+- "Finde Konkurrenten für..." → search_competitors
+- "Wer sind meine Wettbewerber?" → search_competitors
+- Schema Markup generieren → generate_schema_markup (dann selbst das JSON-LD erstellen)
+- Mehrere Seiten einer Domain prüfen → analyze_sitemap
+- "Analysiere meine Sitemap" → analyze_sitemap
 
 ## Wichtig:
 - Antworte IMMER auf Deutsch
 - Sei konkret und hilfreich
 - Wenn du eine Seite abrufst, fasse die wichtigsten GEO-relevanten Punkte zusammen
-- Vergleiche immer mit GEO-Best-Practices
+- Bei search_competitors: Zeige die gefundenen Konkurrenten und biete an, sie zu analysieren
+- Bei generate_schema_markup: Erstelle IMMER ein vollständiges JSON-LD Codebeispiel
+- Bei analyze_sitemap: Fasse die Ergebnisse zusammen und identifiziere gemeinsame Probleme
 
-## GEO-Checkliste für Seitenanalysen:
+## GEO-Checkliste:
 - Meta-Tags (Title, Description)
 - Überschriften-Struktur (H1, H2, H3)
 - Schema Markup (JSON-LD)
 - Statistiken und Quellenangaben
 - Autor-Informationen (E-E-A-T)
-- Aktualität der Inhalte`
+- Aktualität der Inhalte
+- CTAs und Conversion-Elemente
+- Vergleichstabellen für AI-Zitation`
 
 // Helper to extract text content from HTML for chat context
 function extractSimpleContent(html, markdown) {
@@ -134,6 +225,161 @@ async function executeToolCall(toolName, toolInput) {
       }
     } catch (error) {
       return { error: `Vergleich fehlgeschlagen: ${error.message}` }
+    }
+  }
+
+  if (toolName === 'compare_multiple') {
+    try {
+      const urls = toolInput.urls?.slice(0, 5) || []
+      if (urls.length < 2) {
+        return { error: 'Mindestens 2 URLs zum Vergleich erforderlich' }
+      }
+
+      console.log(`[Chat] Comparing ${urls.length} pages`)
+
+      const results = await Promise.all(
+        urls.map(url => executeToolCall('fetch_webpage', { url }))
+      )
+
+      const comparison = results.map((result, index) => ({
+        url: urls[index],
+        title: result.title || 'Unbekannt',
+        content: result.content?.substring(0, 3000) || '',
+        hasError: !!result.error,
+        error: result.error
+      }))
+
+      const successCount = comparison.filter(c => !c.hasError).length
+
+      return {
+        comparison,
+        total: urls.length,
+        successful: successCount,
+        success: successCount > 0
+      }
+    } catch (error) {
+      return { error: `Multi-Vergleich fehlgeschlagen: ${error.message}` }
+    }
+  }
+
+  if (toolName === 'search_competitors') {
+    try {
+      if (!isFirecrawlAvailable()) {
+        return { error: 'Firecrawl ist nicht konfiguriert. Websuche nicht verfügbar.' }
+      }
+
+      const query = toolInput.query
+      const limit = Math.min(toolInput.limit || 5, 10)
+
+      console.log(`[Chat] Searching for: "${query}" (limit: ${limit})`)
+
+      const results = await searchWithFirecrawl(query, limit)
+
+      return {
+        query,
+        results,
+        count: results.length,
+        success: true
+      }
+    } catch (error) {
+      console.error(`[Chat] Search error:`, error.message)
+      return { error: `Suche fehlgeschlagen: ${error.message}` }
+    }
+  }
+
+  if (toolName === 'generate_schema_markup') {
+    try {
+      // If URL provided, fetch the page content
+      if (toolInput.url) {
+        const pageResult = await executeToolCall('fetch_webpage', { url: toolInput.url })
+
+        if (pageResult.error) {
+          return { error: pageResult.error }
+        }
+
+        return {
+          url: toolInput.url,
+          title: pageResult.title,
+          description: pageResult.description,
+          content: pageResult.content?.substring(0, 5000),
+          requested_schema_type: toolInput.schema_type || 'auto',
+          instruction: 'Basierend auf diesem Inhalt, generiere passendes JSON-LD Schema Markup. Berücksichtige den Schema-Typ falls angegeben.',
+          success: true
+        }
+      }
+
+      // No URL - use context from current analysis
+      return {
+        use_current_analysis: true,
+        requested_schema_type: toolInput.schema_type || 'auto',
+        instruction: 'Generiere JSON-LD Schema Markup basierend auf der aktuellen Analyse im Kontext.',
+        success: true
+      }
+    } catch (error) {
+      return { error: `Schema-Generierung vorbereitung fehlgeschlagen: ${error.message}` }
+    }
+  }
+
+  if (toolName === 'analyze_sitemap') {
+    try {
+      if (!isFirecrawlAvailable()) {
+        return { error: 'Firecrawl ist nicht konfiguriert. Sitemap-Analyse nicht verfügbar.' }
+      }
+
+      const limit = Math.min(toolInput.limit || 5, 10)
+      const filter = toolInput.filter || ''
+
+      console.log(`[Chat] Analyzing sitemap for: ${toolInput.url} (limit: ${limit}, filter: "${filter}")`)
+
+      const sitemapResult = await fetchSitemap(toolInput.url)
+
+      if (!sitemapResult.success || sitemapResult.urls.length === 0) {
+        return { error: 'Konnte keine URLs in der Sitemap finden' }
+      }
+
+      // Filter URLs if filter is provided
+      let urlsToAnalyze = sitemapResult.urls
+      if (filter) {
+        urlsToAnalyze = urlsToAnalyze.filter(url => url.includes(filter))
+      }
+
+      // Limit URLs
+      urlsToAnalyze = urlsToAnalyze.slice(0, limit)
+
+      console.log(`[Chat] Analyzing ${urlsToAnalyze.length} URLs from sitemap`)
+
+      // Analyze each URL
+      const results = await Promise.all(
+        urlsToAnalyze.map(async (url) => {
+          try {
+            const pageResult = await executeToolCall('fetch_webpage', { url })
+            return {
+              url,
+              title: pageResult.title || 'Unbekannt',
+              hasContent: !pageResult.error && !!pageResult.content,
+              contentPreview: pageResult.content?.substring(0, 500) || '',
+              error: pageResult.error
+            }
+          } catch (err) {
+            return { url, error: err.message }
+          }
+        })
+      )
+
+      const successfulPages = results.filter(r => r.hasContent)
+
+      return {
+        sitemap_url: sitemapResult.sitemapUrl,
+        total_urls_in_sitemap: sitemapResult.urls.length,
+        analyzed_count: urlsToAnalyze.length,
+        successful_count: successfulPages.length,
+        filter_used: filter || null,
+        results,
+        success: successfulPages.length > 0
+      }
+    } catch (error) {
+      console.error(`[Chat] Sitemap analysis error:`, error.message)
+      return { error: `Sitemap-Analyse fehlgeschlagen: ${error.message}` }
     }
   }
 

@@ -232,3 +232,95 @@ export async function fetchImagesAsBase64(images, maxImages = 5) {
 export function isFirecrawlAvailable() {
   return !!process.env.FIRECRAWL_API_KEY
 }
+
+/**
+ * Search the web using Firecrawl
+ */
+export async function searchWithFirecrawl(query, limit = 5) {
+  const client = getFirecrawlClient()
+  if (!client) {
+    throw new Error('Firecrawl client not initialized')
+  }
+
+  try {
+    console.log(`[Firecrawl] Searching: "${query}" (limit: ${limit})`)
+
+    const result = await client.search(query, {
+      limit: Math.min(limit, 10),
+      lang: 'de',
+      country: 'de'
+    })
+
+    console.log(`[Firecrawl] Search results:`, result?.data?.length || 0)
+
+    const data = result?.data || result || []
+
+    return data.map(item => ({
+      url: item.url,
+      title: item.title || item.metadata?.title || 'Unbekannt',
+      snippet: item.description || item.metadata?.description || item.excerpt || ''
+    }))
+  } catch (error) {
+    console.error(`[Firecrawl] Search error:`, error.message)
+    throw new Error(`Firecrawl search error: ${error.message}`)
+  }
+}
+
+/**
+ * Fetch and parse sitemap.xml from a domain
+ */
+export async function fetchSitemap(url) {
+  const client = getFirecrawlClient()
+  if (!client) {
+    throw new Error('Firecrawl client not initialized')
+  }
+
+  try {
+    // Normalize URL to get sitemap
+    const urlObj = new URL(url.includes('://') ? url : `https://${url}`)
+    let sitemapUrl = url.endsWith('.xml')
+      ? url
+      : `${urlObj.protocol}//${urlObj.host}/sitemap.xml`
+
+    console.log(`[Firecrawl] Fetching sitemap: ${sitemapUrl}`)
+
+    const result = await client.scrape(sitemapUrl, {
+      formats: ['markdown', 'html'],
+      onlyMainContent: false,
+    })
+
+    const doc = result?.data || result
+    const content = doc?.html || doc?.markdown || ''
+
+    // Parse URLs from sitemap XML
+    const urls = []
+    const locRegex = /<loc>([^<]+)<\/loc>/gi
+    let match
+
+    while ((match = locRegex.exec(content)) !== null) {
+      const foundUrl = match[1].trim()
+      if (foundUrl.startsWith('http')) {
+        urls.push(foundUrl)
+      }
+    }
+
+    // If no <loc> tags found, try to extract URLs from plain text
+    if (urls.length === 0) {
+      const urlRegex = /https?:\/\/[^\s<>"]+/gi
+      while ((match = urlRegex.exec(content)) !== null) {
+        urls.push(match[0])
+      }
+    }
+
+    console.log(`[Firecrawl] Found ${urls.length} URLs in sitemap`)
+
+    return {
+      sitemapUrl,
+      urls: [...new Set(urls)], // Remove duplicates
+      success: true
+    }
+  } catch (error) {
+    console.error(`[Firecrawl] Sitemap error:`, error.message)
+    throw new Error(`Sitemap fetch error: ${error.message}`)
+  }
+}
