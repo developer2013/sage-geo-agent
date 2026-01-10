@@ -27,26 +27,34 @@ export async function scrapeWithFirecrawl(url) {
     const result = await client.scrape(url, {
       formats: ['markdown', 'html', 'screenshot', 'links'],
       onlyMainContent: false,
-      waitFor: 2000,
+      waitFor: 3000,
     })
 
-    if (!result.success) {
-      throw new Error(result.error || 'Firecrawl scrape failed')
+    console.log(`[Firecrawl] Result keys:`, Object.keys(result || {}))
+
+    // Handle different response formats from Firecrawl SDK
+    // The SDK may return the document directly or wrap it in a response object
+    const doc = result?.data || result
+
+    if (!doc || (!doc.html && !doc.markdown)) {
+      console.error(`[Firecrawl] Empty or invalid response:`, JSON.stringify(result).substring(0, 500))
+      throw new Error(result?.error || 'Firecrawl returned empty response')
     }
 
     console.log(`[Firecrawl] Successfully scraped: ${url}`)
 
     return {
-      html: result.html || '',
-      markdown: result.markdown || '',
-      screenshot: result.screenshot || null,
-      links: result.links || [],
-      metadata: result.metadata || {},
+      html: doc.html || '',
+      markdown: doc.markdown || '',
+      screenshot: doc.screenshot || null,
+      links: doc.links || [],
+      metadata: doc.metadata || {},
       success: true
     }
   } catch (error) {
     console.error(`[Firecrawl] Error scraping ${url}:`, error.message)
-    throw error
+    console.error(`[Firecrawl] Full error:`, error)
+    throw new Error(`Firecrawl error: ${error.message}`)
   }
 }
 
