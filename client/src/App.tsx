@@ -13,15 +13,9 @@ import type { AnalysisResult as AnalysisResultType, HistoryItem } from '@/types'
 // Always use relative URLs - Vite proxy handles /api in dev mode
 const API_URL = ''
 
-interface ProgressState {
-  step: number
-  message: string
-}
-
 function App() {
   const [darkMode, setDarkMode] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [progress, setProgress] = useState<ProgressState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnalysisResultType | null>(null)
   const [history, setHistory] = useState<HistoryItem[]>([])
@@ -58,60 +52,19 @@ function App() {
     setIsLoading(true)
     setError(null)
     setResult(null)
-    setProgress({ step: 0, message: 'Starte Analyse...' })
 
     try {
-      const response = await fetch(`${API_URL}/api/analyze/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Analyse fehlgeschlagen')
-      }
-
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-
-      if (!reader) {
-        throw new Error('Stream nicht verfügbar')
-      }
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const event = JSON.parse(line.slice(6))
-
-              if (event.type === 'progress') {
-                setProgress({ step: event.step, message: event.message })
-              } else if (event.type === 'complete') {
-                setResult(event.analysis)
-                if (event.analysis.cached) {
-                  setProgress({ step: 3, message: 'Aus Cache geladen!' })
-                }
-                loadHistory()
-              } else if (event.type === 'error') {
-                setError(event.error)
-              }
-            } catch {
-              // Ignore JSON parse errors
-            }
-          }
-        }
-      }
+      const response = await axios.post(`${API_URL}/api/analyze`, { url })
+      setResult(response.data)
+      loadHistory()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ein unerwarteter Fehler ist aufgetreten.')
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.error || 'Analyse fehlgeschlagen. Bitte versuche es erneut.')
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten.')
+      }
     } finally {
       setIsLoading(false)
-      setProgress(null)
     }
   }
 
@@ -155,7 +108,7 @@ function App() {
           <UrlInput onAnalyze={handleAnalyze} isLoading={isLoading} />
 
           {/* Loading Animation */}
-          <LoadingAnimation isLoading={isLoading} progress={progress} />
+          <LoadingAnimation isLoading={isLoading} />
 
           {error && (
             <Card className="border-destructive bg-destructive/10">

@@ -491,10 +491,9 @@ FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
     console.log('[AI] No visual content attached - analysis based on HTML only')
   }
 
-  // Use Sonnet for analysis (faster & cheaper), Opus reserved for chat
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
+    model: 'claude-opus-4-5-20251101',
+    max_tokens: 8192,
     messages: [
       {
         role: 'user',

@@ -1,52 +1,53 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader2, Globe, Brain, FileText, Database } from 'lucide-react'
-
-interface ProgressInfo {
-  step: number
-  message: string
-}
+import { Loader2, Globe, Search, Brain, FileText } from 'lucide-react'
 
 interface LoadingAnimationProps {
   isLoading: boolean
-  progress?: ProgressInfo | null
 }
 
 const steps = [
-  { icon: Database, text: 'Prüfe Cache...', step: 0 },
-  { icon: Globe, text: 'Lade Webseite...', step: 1 },
-  { icon: Brain, text: 'Analysiere mit KI...', step: 2 },
-  { icon: FileText, text: 'Erstelle Bericht...', step: 3 },
+  { icon: Globe, text: 'Verbinde mit Webseite...', duration: 2000 },
+  { icon: Search, text: 'Scanne Inhalte mit Firecrawl...', duration: 3000 },
+  { icon: FileText, text: 'Extrahiere Struktur & Bilder...', duration: 2000 },
+  { icon: Brain, text: 'Analysiere mit Claude Opus 4.5...', duration: 8000 },
 ]
 
-export function LoadingAnimation({ isLoading, progress }: LoadingAnimationProps) {
-  const [animatedProgress, setAnimatedProgress] = useState(0)
-
-  // Use real progress from API or animate based on step
-  const currentStep = progress?.step ?? 0
-  const currentMessage = progress?.message ?? steps[0]?.text ?? 'Starte...'
+export function LoadingAnimation({ isLoading }: LoadingAnimationProps) {
+  const [progress, setProgress] = useState(0)
+  const [currentStep, setCurrentStep] = useState(0)
 
   useEffect(() => {
     if (!isLoading) {
-      setAnimatedProgress(0)
+      setProgress(0)
+      setCurrentStep(0)
       return
     }
 
-    // Calculate target progress based on step (each step is ~25%)
-    const targetProgress = Math.min(95, (currentStep + 1) * 25)
+    // Calculate total duration and step thresholds
+    const totalDuration = steps.reduce((acc, step) => acc + step.duration, 0)
+    let elapsed = 0
 
-    // Smoothly animate to target
     const interval = setInterval(() => {
-      setAnimatedProgress(prev => {
-        if (prev < targetProgress) {
-          return Math.min(prev + 2, targetProgress)
+      elapsed += 100
+
+      // Calculate progress percentage (cap at 95% until complete)
+      const newProgress = Math.min(95, (elapsed / totalDuration) * 100)
+      setProgress(newProgress)
+
+      // Determine current step
+      let stepTime = 0
+      for (let i = 0; i < steps.length; i++) {
+        stepTime += steps[i].duration
+        if (elapsed < stepTime) {
+          setCurrentStep(i)
+          break
         }
-        return prev
-      })
-    }, 50)
+      }
+    }, 100)
 
     return () => clearInterval(interval)
-  }, [isLoading, currentStep])
+  }, [isLoading])
 
   if (!isLoading) return null
 
@@ -68,16 +69,16 @@ export function LoadingAnimation({ isLoading, progress }: LoadingAnimationProps)
           <div className="w-full max-w-md space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground font-medium">
-                {currentMessage}
+                {steps[currentStep]?.text}
               </span>
               <span className="font-mono font-bold text-primary">
-                {Math.round(animatedProgress)}%
+                {Math.round(progress)}%
               </span>
             </div>
             <div className="neu-progress">
               <div
                 className="neu-progress-bar"
-                style={{ width: `${animatedProgress}%` }}
+                style={{ width: `${progress}%` }}
               />
             </div>
           </div>
