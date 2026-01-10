@@ -312,33 +312,60 @@ ${textContent.bodyText.substring(0, 3000)}
 Analysiere diese Daten und gib deine Bewertung als REINES JSON zurück (kein Markdown, kein Text davor/danach).
 Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert werden sollten, fehlende Elemente, etc.`
 
+  // Helper to clean base64 data (remove data URL prefix if present)
+  function cleanBase64(data) {
+    if (!data) return null
+    // Remove data URL prefix like "data:image/png;base64,"
+    if (data.startsWith('data:')) {
+      const commaIndex = data.indexOf(',')
+      if (commaIndex !== -1) {
+        return data.substring(commaIndex + 1)
+      }
+    }
+    return data
+  }
+
+  // Helper to extract media type from data URL
+  function getMediaType(data, fallback = 'image/png') {
+    if (!data) return fallback
+    if (data.startsWith('data:')) {
+      const match = data.match(/^data:([^;,]+)/)
+      if (match) return match[1]
+    }
+    return fallback
+  }
+
   // Build message content array
   const messageContent = []
 
   // Add screenshot if available (from Firecrawl)
   if (pageCode.screenshot) {
-    console.log('[AI] Adding screenshot to analysis...')
-    messageContent.push({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: 'image/png',
-        data: pageCode.screenshot,
-      },
-    })
+    const cleanedScreenshot = cleanBase64(pageCode.screenshot)
+    if (cleanedScreenshot) {
+      console.log('[AI] Adding screenshot to analysis...')
+      messageContent.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: getMediaType(pageCode.screenshot),
+          data: cleanedScreenshot,
+        },
+      })
+    }
   }
 
   // Add individual images if available
   if (pageCode.images && pageCode.images.length > 0) {
     console.log(`[AI] Adding ${pageCode.images.length} images to analysis...`)
     for (const img of pageCode.images.slice(0, 3)) { // Limit to 3 images
-      if (img.base64 && img.mediaType) {
+      const cleanedData = cleanBase64(img.base64)
+      if (cleanedData && img.mediaType) {
         messageContent.push({
           type: 'image',
           source: {
             type: 'base64',
             media_type: img.mediaType,
-            data: img.base64,
+            data: cleanedData,
           },
         })
       }
