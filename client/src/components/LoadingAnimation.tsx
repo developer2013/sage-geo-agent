@@ -85,7 +85,7 @@ export function LoadingAnimation({ isLoading }: LoadingAnimationProps) {
 
           {/* Step Indicators */}
           <div className="flex items-center gap-2">
-            {steps.map((step, index) => (
+            {steps.map((_, index) => (
               <div
                 key={index}
                 className={`h-2 w-2 rounded-full transition-all duration-300 ${
