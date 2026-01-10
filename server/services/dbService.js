@@ -153,3 +153,32 @@ export function deleteChatMessages(analysisId) {
   const result = stmt.run(analysisId)
   return result.changes > 0
 }
+
+// Check for recent analysis of the same URL (within hours)
+export function getRecentAnalysisByUrl(url, hoursAgo = 24) {
+  const db = getDb()
+  const stmt = db.prepare(`
+    SELECT * FROM analyses
+    WHERE url = ?
+    AND datetime(analyzed_at) > datetime('now', '-' || ? || ' hours')
+    ORDER BY analyzed_at DESC
+    LIMIT 1
+  `)
+
+  const row = stmt.get(url, hoursAgo)
+  if (!row) return null
+
+  return {
+    id: row.id,
+    url: row.url,
+    geoScore: row.geo_score,
+    scoreSummary: row.score_summary,
+    strengths: JSON.parse(row.strengths),
+    weaknesses: JSON.parse(row.weaknesses),
+    recommendations: JSON.parse(row.recommendations),
+    nextStep: row.next_step,
+    pageCode: JSON.parse(row.page_code),
+    analyzedAt: row.analyzed_at,
+    cached: true
+  }
+}

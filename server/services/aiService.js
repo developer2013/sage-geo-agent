@@ -103,6 +103,39 @@ Du erhältst einen Screenshot der kompletten Webseite und/oder einzelne Bilder. 
 - Wichtige Statistiken nur als Grafik: -5
 - Professionelles, vertrauenswürdiges Design: +5
 
+## CTA-Analyse (Call-to-Action)
+
+### Was du bei CTAs prüfen sollst:
+1. **Primärer CTA erkennbar** - Gibt es einen klaren Haupt-CTA above the fold?
+2. **CTA-Text analysieren** - Ist der Text handlungsorientiert? ("Jetzt starten" vs "Klicken")
+3. **CTA-Platzierung** - Sind CTAs strategisch platziert (Hero, nach Argumenten, Footer)?
+4. **CTA-Kontrast** - Hebt sich der Button visuell ab?
+5. **CTA-Anzahl** - Gibt es zu viele konkurrierende CTAs?
+
+### CTA-bezogene GEO-Faktoren:
+- Klarer primärer CTA above the fold: +5
+- Handlungsorientierter CTA-Text mit Nutzen: +3
+- CTAs nach überzeugenden Argumenten: +3
+- Zu viele konkurrierende CTAs (>3 verschiedene): -5
+- Kein erkennbarer CTA: -10
+- CTA nur als Bild ohne Text-Alternative: -5
+
+## Tabellen-Analyse
+
+### Was du bei Tabellen prüfen sollst:
+1. **Datenstruktur** - Sind Tabellen semantisch korrekt mit <th> und <td>?
+2. **Überschriften** - Hat jede Spalte eine klare Überschrift?
+3. **Vergleichstabellen** - Für Produktvergleiche ideal für AI-Zitation
+4. **Responsive Design** - Sind Tabellen auf Mobile lesbar?
+5. **Inhalt extrahieren** - Lies die wichtigsten Daten aus Tabellen
+
+### Tabellen-bezogene GEO-Faktoren:
+- Strukturierte Vergleichstabellen mit klaren Daten: +8 (ideal für AI-Zitation)
+- Tabellen mit <th> Überschriften: +3
+- Preistabellen mit klaren Optionen: +5
+- Tabellen ohne Überschriften: -3
+- Wichtige Daten nur als Bild-Tabelle: -8
+
 ## ANTWORTFORMAT (STRIKT JSON!)
 
 Gib NUR dieses JSON zurück, KEIN anderer Text:
@@ -125,6 +158,21 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
     "textInImages": "<Erkannter Text aus Bildern/Grafiken>",
     "accessibilityIssues": ["<Liste von Accessibility-Problemen>"],
     "recommendations": ["<Bild-spezifische Empfehlungen>"]
+  },
+  "ctaAnalysis": {
+    "primaryCta": "<Text des Haupt-CTAs oder null>",
+    "ctaCount": <Anzahl gefundener CTAs>,
+    "ctaQuality": "GUT|MITTEL|SCHLECHT",
+    "ctaTexts": ["<Liste aller CTA-Texte>"],
+    "issues": ["<CTA-bezogene Probleme>"]
+  },
+  "tableAnalysis": {
+    "tableCount": <Anzahl Tabellen>,
+    "hasComparisonTable": <true|false>,
+    "hasPricingTable": <true|false>,
+    "hasProperHeaders": <true|false>,
+    "keyData": ["<Wichtige Daten aus Tabellen>"],
+    "issues": ["<Tabellen-bezogene Probleme>"]
   }
 }
 
@@ -443,9 +491,10 @@ FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
     console.log('[AI] No visual content attached - analysis based on HTML only')
   }
 
+  // Use Sonnet for analysis (faster & cheaper), Opus reserved for chat
   const message = await client.messages.create({
-    model: 'claude-opus-4-5-20251101',
-    max_tokens: 8192,
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
     messages: [
       {
         role: 'user',

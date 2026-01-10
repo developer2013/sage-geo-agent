@@ -165,12 +165,55 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
     }
   }
 
-  const suggestedQuestions = [
-    'Wie kann ich den Score verbessern?',
-    'Vergleiche mit einem Konkurrenten',
-    'Schau dir example.com an',
-    'Was macht die Konkurrenz besser?',
-  ]
+  // Generate dynamic questions based on weaknesses
+  const generateSuggestedQuestions = () => {
+    const questions: string[] = []
+
+    // Add questions based on critical weaknesses
+    const criticalWeaknesses = analysis.weaknesses?.filter(w => w.priority === 'KRITISCH') || []
+    const mediumWeaknesses = analysis.weaknesses?.filter(w => w.priority === 'MITTEL') || []
+
+    if (criticalWeaknesses.length > 0) {
+      const firstCritical = criticalWeaknesses[0]
+      questions.push(`Wie behebe ich: ${firstCritical.title}?`)
+    }
+
+    // Check for specific issues and add relevant questions
+    const hasNoSchema = analysis.weaknesses?.some(w =>
+      w.title.toLowerCase().includes('schema') || w.description.toLowerCase().includes('schema')
+    )
+    if (hasNoSchema) {
+      questions.push('Zeig mir ein Schema Markup Beispiel')
+    }
+
+    const hasNoCTA = analysis.ctaAnalysis?.ctaQuality === 'SCHLECHT' || !analysis.ctaAnalysis?.primaryCta
+    if (hasNoCTA) {
+      questions.push('Wie gestalte ich bessere CTAs?')
+    }
+
+    const hasNoStats = analysis.weaknesses?.some(w =>
+      w.title.toLowerCase().includes('statistik') || w.description.toLowerCase().includes('statistik')
+    )
+    if (hasNoStats) {
+      questions.push('Welche Statistiken sollte ich hinzufügen?')
+    }
+
+    // Add general questions if we don't have enough
+    if (questions.length < 2) {
+      questions.push('Wie kann ich den Score verbessern?')
+    }
+    if (questions.length < 3) {
+      questions.push('Vergleiche mit einem Konkurrenten')
+    }
+    if (questions.length < 4 && mediumWeaknesses.length > 0) {
+      questions.push(`Was ist mit: ${mediumWeaknesses[0].title}?`)
+    }
+
+    // Ensure max 4 questions
+    return questions.slice(0, 4)
+  }
+
+  const suggestedQuestions = generateSuggestedQuestions()
 
   if (!isExpanded) {
     return (

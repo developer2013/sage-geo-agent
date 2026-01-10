@@ -1,53 +1,52 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader2, Globe, Search, Brain, FileText } from 'lucide-react'
+import { Loader2, Globe, Brain, FileText, Database } from 'lucide-react'
+
+interface ProgressInfo {
+  step: number
+  message: string
+}
 
 interface LoadingAnimationProps {
   isLoading: boolean
+  progress?: ProgressInfo | null
 }
 
 const steps = [
-  { icon: Globe, text: 'Verbinde mit Webseite...', duration: 2000 },
-  { icon: Search, text: 'Scanne Inhalte mit Firecrawl...', duration: 3000 },
-  { icon: FileText, text: 'Extrahiere Struktur & Bilder...', duration: 2000 },
-  { icon: Brain, text: 'Analysiere mit Claude Opus 4.5...', duration: 8000 },
+  { icon: Database, text: 'Prüfe Cache...', step: 0 },
+  { icon: Globe, text: 'Lade Webseite...', step: 1 },
+  { icon: Brain, text: 'Analysiere mit KI...', step: 2 },
+  { icon: FileText, text: 'Erstelle Bericht...', step: 3 },
 ]
 
-export function LoadingAnimation({ isLoading }: LoadingAnimationProps) {
-  const [progress, setProgress] = useState(0)
-  const [currentStep, setCurrentStep] = useState(0)
+export function LoadingAnimation({ isLoading, progress }: LoadingAnimationProps) {
+  const [animatedProgress, setAnimatedProgress] = useState(0)
+
+  // Use real progress from API or animate based on step
+  const currentStep = progress?.step ?? 0
+  const currentMessage = progress?.message ?? steps[0]?.text ?? 'Starte...'
 
   useEffect(() => {
     if (!isLoading) {
-      setProgress(0)
-      setCurrentStep(0)
+      setAnimatedProgress(0)
       return
     }
 
-    // Calculate total duration and step thresholds
-    const totalDuration = steps.reduce((acc, step) => acc + step.duration, 0)
-    let elapsed = 0
+    // Calculate target progress based on step (each step is ~25%)
+    const targetProgress = Math.min(95, (currentStep + 1) * 25)
 
+    // Smoothly animate to target
     const interval = setInterval(() => {
-      elapsed += 100
-
-      // Calculate progress percentage (cap at 95% until complete)
-      const newProgress = Math.min(95, (elapsed / totalDuration) * 100)
-      setProgress(newProgress)
-
-      // Determine current step
-      let stepTime = 0
-      for (let i = 0; i < steps.length; i++) {
-        stepTime += steps[i].duration
-        if (elapsed < stepTime) {
-          setCurrentStep(i)
-          break
+      setAnimatedProgress(prev => {
+        if (prev < targetProgress) {
+          return Math.min(prev + 2, targetProgress)
         }
-      }
-    }, 100)
+        return prev
+      })
+    }, 50)
 
     return () => clearInterval(interval)
-  }, [isLoading])
+  }, [isLoading, currentStep])
 
   if (!isLoading) return null
 
@@ -69,16 +68,16 @@ export function LoadingAnimation({ isLoading }: LoadingAnimationProps) {
           <div className="w-full max-w-md space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground font-medium">
-                {steps[currentStep]?.text}
+                {currentMessage}
               </span>
               <span className="font-mono font-bold text-primary">
-                {Math.round(progress)}%
+                {Math.round(animatedProgress)}%
               </span>
             </div>
             <div className="neu-progress">
               <div
                 className="neu-progress-bar"
-                style={{ width: `${progress}%` }}
+                style={{ width: `${animatedProgress}%` }}
               />
             </div>
           </div>
@@ -100,7 +99,7 @@ export function LoadingAnimation({ isLoading }: LoadingAnimationProps) {
           {/* Spinner Badge */}
           <div className="neu-badge flex items-center gap-2 text-sm text-muted-foreground px-4 py-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span>GEO-Analyse laeuft...</span>
+            <span>GEO-Analyse läuft...</span>
           </div>
         </div>
       </CardContent>

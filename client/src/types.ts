@@ -28,6 +28,30 @@ export interface PageCode {
   robotsTxt: string | null
 }
 
+export interface ImageAnalysis {
+  hasVisualContent: boolean
+  textInImages: string
+  accessibilityIssues: string[]
+  recommendations: string[]
+}
+
+export interface CtaAnalysis {
+  primaryCta: string | null
+  ctaCount: number
+  ctaQuality: 'GUT' | 'MITTEL' | 'SCHLECHT'
+  ctaTexts: string[]
+  issues: string[]
+}
+
+export interface TableAnalysis {
+  tableCount: number
+  hasComparisonTable: boolean
+  hasPricingTable: boolean
+  hasProperHeaders: boolean
+  keyData: string[]
+  issues: string[]
+}
+
 export interface AnalysisResult {
   id: string
   url: string
@@ -39,6 +63,10 @@ export interface AnalysisResult {
   recommendations: Recommendation[]
   nextStep: string
   pageCode: PageCode
+  imageAnalysis?: ImageAnalysis | null
+  ctaAnalysis?: CtaAnalysis | null
+  tableAnalysis?: TableAnalysis | null
+  cached?: boolean
 }
 
 export interface HistoryItem {
