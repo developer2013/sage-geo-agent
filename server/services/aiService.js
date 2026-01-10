@@ -312,17 +312,37 @@ ${textContent.bodyText.substring(0, 3000)}
 Analysiere diese Daten und gib deine Bewertung als REINES JSON zurück (kein Markdown, kein Text davor/danach).
 Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert werden sollten, fehlende Elemente, etc.`
 
-  // Helper to clean base64 data (remove data URL prefix if present)
+  // Helper to clean and validate base64 data
   function cleanBase64(data) {
     if (!data) return null
+
+    let cleaned = data
+
     // Remove data URL prefix like "data:image/png;base64,"
-    if (data.startsWith('data:')) {
-      const commaIndex = data.indexOf(',')
+    if (cleaned.startsWith('data:')) {
+      const commaIndex = cleaned.indexOf(',')
       if (commaIndex !== -1) {
-        return data.substring(commaIndex + 1)
+        cleaned = cleaned.substring(commaIndex + 1)
       }
     }
-    return data
+
+    // Remove whitespace and newlines
+    cleaned = cleaned.replace(/\s/g, '')
+
+    // Validate base64 format
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+    if (!base64Regex.test(cleaned)) {
+      console.error('[AI] Invalid base64 data detected, first 100 chars:', cleaned.substring(0, 100))
+      return null
+    }
+
+    // Check minimum length (a valid image should have some data)
+    if (cleaned.length < 100) {
+      console.error('[AI] Base64 data too short:', cleaned.length)
+      return null
+    }
+
+    return cleaned
   }
 
   // Helper to extract media type from data URL
@@ -340,9 +360,13 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
 
   // Add screenshot if available (from Firecrawl)
   if (pageCode.screenshot) {
+    console.log('[AI] Screenshot data type:', typeof pageCode.screenshot)
+    console.log('[AI] Screenshot first 100 chars:', String(pageCode.screenshot).substring(0, 100))
+    console.log('[AI] Screenshot length:', String(pageCode.screenshot).length)
+
     const cleanedScreenshot = cleanBase64(pageCode.screenshot)
     if (cleanedScreenshot) {
-      console.log('[AI] Adding screenshot to analysis...')
+      console.log('[AI] Adding cleaned screenshot, length:', cleanedScreenshot.length)
       messageContent.push({
         type: 'image',
         source: {
@@ -351,13 +375,16 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
           data: cleanedScreenshot,
         },
       })
+    } else {
+      console.log('[AI] Screenshot skipped - invalid base64')
     }
   }
 
-  // Add individual images if available
+  // Add individual images if available (skip for now to debug)
   if (pageCode.images && pageCode.images.length > 0) {
-    console.log(`[AI] Adding ${pageCode.images.length} images to analysis...`)
-    for (const img of pageCode.images.slice(0, 3)) { // Limit to 3 images
+    console.log(`[AI] Found ${pageCode.images.length} images, validating...`)
+    let addedImages = 0
+    for (const img of pageCode.images.slice(0, 3)) {
       const cleanedData = cleanBase64(img.base64)
       if (cleanedData && img.mediaType) {
         messageContent.push({
@@ -368,8 +395,10 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
             data: cleanedData,
           },
         })
+        addedImages++
       }
     }
+    console.log(`[AI] Added ${addedImages} valid images`)
   }
 
   // Add text content

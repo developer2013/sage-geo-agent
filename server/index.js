@@ -5,6 +5,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import analyzeRouter from './routes/analyze.js'
 import historyRouter from './routes/history.js'
+import chatRouter from './routes/chat.js'
 import { initDatabase } from './services/dbService.js'
 
 dotenv.config({ path: '../.env' })
@@ -25,6 +26,7 @@ initDatabase()
 // API Routes
 app.use('/api/analyze', analyzeRouter)
 app.use('/api/history', historyRouter)
+app.use('/api/chat', chatRouter)
 
 // Health check (must be before catch-all)
 app.get('/api/health', (req, res) => {

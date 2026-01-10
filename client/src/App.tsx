@@ -4,6 +4,8 @@ import { Header } from '@/components/Header'
 import { UrlInput } from '@/components/UrlInput'
 import { AnalysisResult } from '@/components/AnalysisResult'
 import { HistoryPanel } from '@/components/HistoryPanel'
+import { LoadingAnimation } from '@/components/LoadingAnimation'
+import { ChatPanel } from '@/components/ChatPanel'
 import { Card, CardContent } from '@/components/ui/card'
 import { Sparkles } from 'lucide-react'
 import type { AnalysisResult as AnalysisResultType, HistoryItem } from '@/types'
@@ -105,6 +107,9 @@ function App() {
         <div className="space-y-6">
           <UrlInput onAnalyze={handleAnalyze} isLoading={isLoading} />
 
+          {/* Loading Animation */}
+          <LoadingAnimation isLoading={isLoading} />
+
           {error && (
             <Card className="border-destructive bg-destructive/10">
               <CardContent className="pt-4">
@@ -113,7 +118,12 @@ function App() {
             </Card>
           )}
 
-          {result && <AnalysisResult result={result} />}
+          {result && (
+            <>
+              <AnalysisResult result={result} />
+              <ChatPanel analysis={result} />
+            </>
+          )}
 
           {!result && !isLoading && !error && (
             <Card className="border-dashed">
