@@ -27,6 +27,13 @@ router.post('/', async (req, res) => {
     // Fetch page content
     const pageCode = await fetchPageContent(validUrl.href)
 
+    // Debug visual content
+    console.log(`[Analyze] Screenshot available: ${!!pageCode.screenshot}`)
+    console.log(`[Analyze] Images available: ${pageCode.images?.length || 0}`)
+    if (pageCode.screenshot) {
+      console.log(`[Analyze] Screenshot length: ${pageCode.screenshot.length}`)
+    }
+
     // Analyze with Claude
     const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode)
 

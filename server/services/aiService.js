@@ -83,13 +83,16 @@ GEO ist der strategische Prozess, Inhalte so zu gestalten, dass sie von KI-Syste
 - Nutzt Google-Index
 - Bestehende Top-Rankings werden priorisiert
 
-## Bildanalyse für GEO
+## Bildanalyse für GEO (WICHTIG!)
 
-Analysiere auch die visuellen Elemente der Seite (falls Screenshot/Bilder vorhanden):
-- Text in Bildern/Grafiken (wichtig für Accessibility und AI-Lesbarkeit)
-- Infografiken mit Statistiken
-- UI-Elemente und deren Beschriftungen
-- Alt-Texte prüfen ob vorhanden und aussagekräftig
+Du erhältst einen Screenshot der kompletten Webseite und/oder einzelne Bilder. Analysiere diese visuell:
+
+### Was du im Screenshot/Bildern prüfen sollst:
+1. **Text in Grafiken erkennen** - Lies allen sichtbaren Text in Bildern, Infografiken, Bannern
+2. **UI-Elemente beschreiben** - Buttons, Formulare, Navigation, CTAs
+3. **Statistiken/Charts analysieren** - Zahlen aus Diagrammen extrahieren
+4. **Design-Qualität bewerten** - Ist die Seite visuell ansprechend und professionell?
+5. **Hero-Bereich analysieren** - Was kommuniziert die Seite "above the fold"?
 
 ### Bildbasierte GEO-Faktoren:
 - Bilder ohne Alt-Text: -5 Punkte (pro Bild bis max -15)
@@ -98,6 +101,7 @@ Analysiere auch die visuellen Elemente der Seite (falls Screenshot/Bilder vorhan
 - Infografiken mit zugänglichen Daten: +5
 - Text in Bildern der auch im HTML steht: Neutral
 - Wichtige Statistiken nur als Grafik: -5
+- Professionelles, vertrauenswürdiges Design: +5
 
 ## ANTWORTFORMAT (STRIKT JSON!)
 
@@ -408,21 +412,35 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
   })
 
   // Add image analysis instructions if we have visual content
-  if (pageCode.screenshot || (pageCode.images && pageCode.images.length > 0)) {
+  const hasVisualContent = messageContent.some(c => c.type === 'image')
+
+  if (hasVisualContent) {
+    console.log('[AI] Visual content attached - adding image analysis instructions')
     messageContent.push({
       type: 'text',
       text: `
 
-WICHTIG - BILDANALYSE:
-Du siehst oben einen Screenshot der Webseite und/oder einzelne Bilder. Bitte analysiere:
-1. Welcher Text ist in den Bildern/Grafiken sichtbar?
-2. Gibt es Infografiken mit wichtigen Statistiken?
-3. Sind UI-Elemente gut beschriftet?
-4. Welche wichtigen Informationen sind NUR als Bild vorhanden (nicht im HTML)?
-5. Gibt es Accessibility-Probleme bei der Bildnutzung?
+═══════════════════════════════════════════
+VISUELLE ANALYSE (DU SIEHST DIE BILDER!)
+═══════════════════════════════════════════
 
-Füge deine Bildanalyse in das "imageAnalysis" Feld der JSON-Antwort ein.`
+Die Bilder oben zeigen dir die echte Webseite. Du KANNST und SOLLST diese visuell analysieren:
+
+1. **Text aus Bildern extrahieren** - Lies JEDEN sichtbaren Text in Grafiken, Bannern, Screenshots
+2. **Hero-Bereich beschreiben** - Was sieht der Nutzer zuerst? Welche Botschaft?
+3. **Statistiken in Grafiken** - Erkenne Zahlen in Charts, Diagrammen, Infografiken
+4. **UI/UX bewerten** - Sind Buttons klar? Navigation intuitiv? CTAs sichtbar?
+5. **Design-Qualität** - Professionell? Vertrauenswürdig? Modern?
+6. **Accessibility** - Kontraste ausreichend? Text lesbar?
+
+FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
+- hasVisualContent: true
+- textInImages: "Alle erkannten Texte aus den Bildern"
+- accessibilityIssues: ["Gefundene Probleme"]
+- recommendations: ["Visuelle Verbesserungsvorschläge"]`
     })
+  } else {
+    console.log('[AI] No visual content attached - analysis based on HTML only')
   }
 
   const message = await client.messages.create({

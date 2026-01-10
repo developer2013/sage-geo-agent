@@ -28,7 +28,17 @@ export async function scrapeWithFirecrawl(url) {
       formats: ['markdown', 'html', 'screenshot', 'links'],
       onlyMainContent: false,
       waitFor: 3000,
+      screenshot: true, // Explicitly request screenshot
     })
+
+    // Debug screenshot data
+    const doc = result?.data || result
+    if (doc?.screenshot) {
+      console.log(`[Firecrawl] Screenshot received: ${typeof doc.screenshot}, length: ${String(doc.screenshot).length}`)
+      console.log(`[Firecrawl] Screenshot preview: ${String(doc.screenshot).substring(0, 80)}...`)
+    } else {
+      console.log(`[Firecrawl] No screenshot in response`)
+    }
 
     console.log(`[Firecrawl] Result keys:`, Object.keys(result || {}))
 

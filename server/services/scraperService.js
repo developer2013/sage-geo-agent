@@ -157,6 +157,13 @@ export async function fetchPageContent(url) {
     const images = await fetchImagesAsBase64(imageUrls, 5)
     console.log(`[Scraper] Fetched ${images.length} images for analysis`)
 
+    // Log screenshot status
+    if (firecrawlResult.screenshot) {
+      console.log(`[Scraper] Screenshot available, length: ${firecrawlResult.screenshot.length}`)
+    } else {
+      console.log(`[Scraper] No screenshot from Firecrawl`)
+    }
+
     return {
       html: firecrawlResult.html,
       markdown: firecrawlResult.markdown,
