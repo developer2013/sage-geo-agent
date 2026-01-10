@@ -113,80 +113,71 @@ async function fetchPageContentFallback(url) {
 }
 
 /**
- * Primary function to fetch page content - uses Firecrawl with fallback
+ * Primary function to fetch page content - uses Firecrawl if configured, otherwise fallback
  */
 export async function fetchPageContent(url) {
-  try {
-    // Try Firecrawl first if available
-    if (isFirecrawlAvailable()) {
-      try {
-        console.log('[Scraper] Using Firecrawl...')
+  // Use Firecrawl if configured (no fallback - Firecrawl handles bot protection)
+  if (isFirecrawlAvailable()) {
+    console.log('[Scraper] Using Firecrawl...')
 
-        // Scrape page with Firecrawl
-        const firecrawlResult = await scrapeWithFirecrawl(url)
+    // Scrape page with Firecrawl
+    const firecrawlResult = await scrapeWithFirecrawl(url)
 
-        // Get robots.txt separately
-        const robotsTxt = await getRobotsTxt(url)
+    // Get robots.txt separately
+    const robotsTxt = await getRobotsTxt(url)
 
-        // Parse HTML with cheerio for meta tags and schema
-        const $ = cheerio.load(firecrawlResult.html)
+    // Parse HTML with cheerio for meta tags and schema
+    const $ = cheerio.load(firecrawlResult.html)
 
-        const metaTags = []
-        $('meta').each((_, el) => {
-          const name = $(el).attr('name')
-          const property = $(el).attr('property')
-          const content = $(el).attr('content')
+    const metaTags = []
+    $('meta').each((_, el) => {
+      const name = $(el).attr('name')
+      const property = $(el).attr('property')
+      const content = $(el).attr('content')
 
-          if (content && (name || property)) {
-            metaTags.push({ name, property, content })
-          }
-        })
-
-        const schemaMarkup = []
-        $('script[type="application/ld+json"]').each((_, el) => {
-          try {
-            const json = JSON.parse($(el).html())
-            schemaMarkup.push(json)
-          } catch (e) {
-            // Invalid JSON, skip
-          }
-        })
-
-        // Extract and fetch images for analysis
-        const imageUrls = extractImageUrls(firecrawlResult.html, url)
-        console.log(`[Scraper] Found ${imageUrls.length} images on page`)
-
-        const images = await fetchImagesAsBase64(imageUrls, 5)
-        console.log(`[Scraper] Fetched ${images.length} images for analysis`)
-
-        return {
-          html: firecrawlResult.html,
-          markdown: firecrawlResult.markdown,
-          metaTags,
-          schemaMarkup,
-          robotsTxt,
-          screenshot: firecrawlResult.screenshot,
-          images,
-          metadata: firecrawlResult.metadata,
-          usedFirecrawl: true
-        }
-      } catch (firecrawlError) {
-        console.error('[Scraper] Firecrawl failed, falling back to native fetch:', firecrawlError.message)
+      if (content && (name || property)) {
+        metaTags.push({ name, property, content })
       }
-    } else {
-      console.log('[Scraper] Firecrawl not configured, using fallback scraper')
-    }
+    })
 
-    // Fallback to native fetch
-    const fallbackResult = await fetchPageContentFallback(url)
+    const schemaMarkup = []
+    $('script[type="application/ld+json"]').each((_, el) => {
+      try {
+        const json = JSON.parse($(el).html())
+        schemaMarkup.push(json)
+      } catch (e) {
+        // Invalid JSON, skip
+      }
+    })
+
+    // Extract and fetch images for analysis
+    const imageUrls = extractImageUrls(firecrawlResult.html, url)
+    console.log(`[Scraper] Found ${imageUrls.length} images on page`)
+
+    const images = await fetchImagesAsBase64(imageUrls, 5)
+    console.log(`[Scraper] Fetched ${images.length} images for analysis`)
+
     return {
-      ...fallbackResult,
-      markdown: null,
-      metadata: null,
-      usedFirecrawl: false
+      html: firecrawlResult.html,
+      markdown: firecrawlResult.markdown,
+      metaTags,
+      schemaMarkup,
+      robotsTxt,
+      screenshot: firecrawlResult.screenshot,
+      images,
+      metadata: firecrawlResult.metadata,
+      usedFirecrawl: true
     }
-  } catch (error) {
-    throw new Error(`Failed to fetch page: ${error.message}`)
+  }
+
+  // Fallback to native fetch (only when Firecrawl is not configured)
+  console.log('[Scraper] Firecrawl not configured, using fallback scraper')
+  const fallbackResult = await fetchPageContentFallback(url)
+  return {
+    ...fallbackResult,
+    markdown: null,
+    metadata: null,
+    usedFirecrawl: false
   }
 }
 
