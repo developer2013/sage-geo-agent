@@ -12,6 +12,14 @@ interface Message {
   content: string
 }
 
+interface StreamEvent {
+  type: 'text' | 'tool_start' | 'tool_executing' | 'tool_result' | 'done' | 'error'
+  content?: string
+  tool?: string
+  success?: boolean
+  error?: string
+}
+
 interface ChatPanelProps {
   analysis: AnalysisResult
 }
@@ -22,6 +30,8 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [currentTool, setCurrentTool] = useState<string | null>(null)
+  const [streamingContent, setStreamingContent] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Load chat history when analysis changes
@@ -53,7 +63,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages])
+  }, [messages, streamingContent])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -62,23 +72,80 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
     setIsLoading(true)
+    setStreamingContent('')
+    setCurrentTool(null)
 
     try {
-      const response = await axios.post('/api/chat', {
-        message: userMessage,
-        analysisId: analysis.id,
-        context: {
-          url: analysis.url,
-          geoScore: analysis.geoScore,
-          scoreSummary: analysis.scoreSummary,
-          strengths: analysis.strengths,
-          weaknesses: analysis.weaknesses,
-          recommendations: analysis.recommendations,
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        history: messages,
+        body: JSON.stringify({
+          message: userMessage,
+          analysisId: analysis.id,
+          context: {
+            url: analysis.url,
+            geoScore: analysis.geoScore,
+            scoreSummary: analysis.scoreSummary,
+            strengths: analysis.strengths,
+            weaknesses: analysis.weaknesses,
+            recommendations: analysis.recommendations,
+          },
+          history: messages,
+        }),
       })
 
-      setMessages(prev => [...prev, { role: 'assistant', content: response.data.response }])
+      if (!response.ok) {
+        throw new Error('Stream request failed')
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let accumulatedContent = ''
+
+      if (!reader) {
+        throw new Error('No reader available')
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event: StreamEvent = JSON.parse(line.slice(6))
+
+              if (event.type === 'text') {
+                accumulatedContent += event.content || ''
+                setStreamingContent(accumulatedContent)
+              } else if (event.type === 'tool_start') {
+                setCurrentTool(event.tool || null)
+              } else if (event.type === 'tool_executing') {
+                // Tool is being executed
+              } else if (event.type === 'tool_result') {
+                setCurrentTool(null)
+              } else if (event.type === 'done') {
+                if (accumulatedContent) {
+                  setMessages(prev => [...prev, { role: 'assistant', content: accumulatedContent }])
+                }
+                setStreamingContent('')
+              } else if (event.type === 'error') {
+                setMessages(prev => [
+                  ...prev,
+                  { role: 'assistant', content: `Fehler: ${event.error}` },
+                ])
+              }
+            } catch {
+              // Ignore JSON parse errors for incomplete chunks
+            }
+          }
+        }
+      }
     } catch (err) {
       setMessages(prev => [
         ...prev,
@@ -86,6 +153,8 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
       ])
     } finally {
       setIsLoading(false)
+      setStreamingContent('')
+      setCurrentTool(null)
     }
   }
 
@@ -210,13 +279,24 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
               </div>
             ))}
 
-            {isLoading && (
+            {/* Streaming response */}
+            {(isLoading || streamingContent) && (
               <div className="flex gap-3">
                 <div className="neu-icon p-2 h-fit animate-pulse">
                   <Bot className="h-4 w-4 text-primary" />
                 </div>
-                <div className="bg-background p-3 rounded-xl shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <div className="max-w-[80%] bg-background p-3 rounded-xl shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]">
+                  {currentTool && (
+                    <div className="flex items-center gap-2 text-sm text-primary mb-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Rufe {currentTool === 'fetch_webpage' ? 'Webseite' : 'Daten'} ab...</span>
+                    </div>
+                  )}
+                  {streamingContent ? (
+                    <p className="text-sm whitespace-pre-wrap">{streamingContent}</p>
+                  ) : (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  )}
                 </div>
               </div>
             )}
