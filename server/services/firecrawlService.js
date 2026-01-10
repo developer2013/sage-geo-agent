@@ -24,7 +24,7 @@ export async function scrapeWithFirecrawl(url) {
   try {
     console.log(`[Firecrawl] Scraping: ${url}`)
 
-    const result = await client.scrapeUrl(url, {
+    const result = await client.scrape(url, {
       formats: ['markdown', 'html', 'screenshot', 'links'],
       onlyMainContent: false,
       waitFor: 2000,
@@ -65,7 +65,7 @@ export async function getRobotsTxt(url) {
 
     console.log(`[Firecrawl] Fetching robots.txt: ${robotsUrl}`)
 
-    const result = await client.scrapeUrl(robotsUrl, {
+    const result = await client.scrape(robotsUrl, {
       formats: ['markdown'],
       onlyMainContent: false,
     })
