@@ -97,10 +97,10 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
   }
 
   const suggestedQuestions = [
-    'Wie kann ich den GEO-Score verbessern?',
-    'Erklaere die wichtigsten Schwaechen',
-    'Was sollte ich zuerst aendern?',
-    'Wie optimiere ich fuer ChatGPT?',
+    'Wie kann ich den Score verbessern?',
+    'Vergleiche mit einem Konkurrenten',
+    'Schau dir example.com an',
+    'Was macht die Konkurrenz besser?',
   ]
 
   if (!isExpanded) {
@@ -128,7 +128,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
                 <p className="text-sm text-muted-foreground">
                   {messages.length > 0
                     ? 'Setze die Unterhaltung fort'
-                    : 'Stelle Fragen zur Analyse und erhalte personalisierte Tipps'}
+                    : 'Frag nach URLs, vergleiche Seiten, erhalte GEO-Tipps'}
                 </p>
               </div>
             </div>
@@ -165,7 +165,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
             {messages.length === 0 && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Stelle Fragen zu deiner GEO-Analyse. Claude hilft dir, die Ergebnisse zu verstehen und gibt personalisierte Tipps.
+                  Claude kann beliebige Webseiten abrufen und analysieren. Frag nach URLs, vergleiche Konkurrenten, oder lass dir GEO-Tipps geben.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {suggestedQuestions.map((question, index) => (
