@@ -14,12 +14,17 @@ const router = express.Router()
 function calculateContentStats(html, baseUrl) {
   const $ = cheerio.load(html)
 
-  // Remove script and style elements for text extraction
-  $('script, style, noscript').remove()
+  // Remove non-content elements for accurate statistics
+  $('script, style, noscript, svg, iframe').remove()
+  // Remove navigation, header, footer (usually not main content)
+  $('nav, header, footer, .nav, .navigation, .header, .footer, .menu, .sidebar, .cookie-banner, .sticky-nav').remove()
+  // Remove hidden elements
+  $('[hidden], [style*="display: none"], [style*="display:none"], .hidden, .visually-hidden').remove()
 
-  // Get text content and count words
-  const textContent = $('body').text()
-  const words = textContent.split(/\s+/).filter(w => w.length > 0)
+  // Get text content and count words - prefer main content areas
+  const mainContent = $('main, article, [role="main"], .content, .main-content, #content, #main').first()
+  const textContent = mainContent.length > 0 ? mainContent.text() : $('body').text()
+  const words = textContent.split(/\s+/).filter(w => w.length > 0 && w.length < 50) // Skip very long "words" (likely encoded data)
   const wordCount = words.length
 
   // Domains to exclude (YouTube embeds, tracking pixels, etc.)
@@ -77,18 +82,20 @@ function calculateContentStats(html, baseUrl) {
 
   const imageCount = uniqueImageUrls.size
 
-  // Count unique links (deduplicated)
+  // Count unique links (deduplicated) - only from main content area
   const uniqueInternalLinks = new Set()
   const uniqueExternalLinks = new Set()
 
   try {
     const baseHost = new URL(baseUrl).hostname
+    const basePath = new URL(baseUrl).pathname
+
     $('a[href]').each((_, link) => {
       const href = $(link).attr('href')
       if (!href || href === '#' || href.startsWith('javascript:')) return
       // Skip mailto:, tel:, sms:, and other non-http protocols
       if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('sms:')) return
-      // Skip anchor-only links
+      // Skip anchor-only links (in-page navigation)
       if (href.startsWith('#')) return
       if (isExcludedUrl(href)) return
 
@@ -114,13 +121,22 @@ function calculateContentStats(html, baseUrl) {
           if (!['http:', 'https:'].includes(linkUrl.protocol)) return
           const linkHost = linkUrl.hostname
           isInternal = linkHost === baseHost || linkHost.endsWith('.' + baseHost)
+          // Normalize: remove query params and hash, keep only origin + pathname
           normalizedHref = linkUrl.origin + linkUrl.pathname
+
+          // Skip self-referencing links (same page with different hash)
+          if (isInternal && linkUrl.pathname === basePath) {
+            return // This is just an in-page anchor link
+          }
         }
 
-        if (isInternal) {
-          uniqueInternalLinks.add(normalizedHref)
-        } else {
-          uniqueExternalLinks.add(normalizedHref)
+        // Only add if we have an actual path (not just the domain)
+        if (normalizedHref && normalizedHref.length > 0) {
+          if (isInternal) {
+            uniqueInternalLinks.add(normalizedHref)
+          } else {
+            uniqueExternalLinks.add(normalizedHref)
+          }
         }
       } catch {
         // Invalid URL, skip it
