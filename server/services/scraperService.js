@@ -143,6 +143,15 @@ export async function fetchPageContent(url) {
       }
     })
 
+    // DEBUG: Check for description meta tag
+    const descriptionTag = metaTags.find(t => t.name?.toLowerCase() === 'description')
+    const ogDescTag = metaTags.find(t => t.property?.toLowerCase() === 'og:description')
+    console.log(`[Scraper] META DEBUG:`)
+    console.log(`  - Total meta tags: ${metaTags.length}`)
+    console.log(`  - Description tag: ${descriptionTag ? descriptionTag.content?.substring(0, 50) + '...' : 'NOT FOUND'}`)
+    console.log(`  - OG Description: ${ogDescTag ? ogDescTag.content?.substring(0, 50) + '...' : 'NOT FOUND'}`)
+    console.log(`  - First 5 tags: ${metaTags.slice(0, 5).map(t => t.name || t.property).join(', ')}`)
+
     const schemaMarkup = []
     $('script[type="application/ld+json"]').each((_, el) => {
       try {

@@ -262,6 +262,24 @@ Erlaubt sein sollten:
 export async function analyzeWithClaude(url, pageContent, pageCode) {
   const textContent = extractTextContent(pageCode.html)
 
+  // FIX: Get title and description from metaTags/metadata (extracted from rawHtml) because pageCode.html doesn't include <head>
+  const descriptionFromMeta = pageCode.metaTags?.find(t => t.name?.toLowerCase() === 'description')?.content
+  const ogDescFromMeta = pageCode.metaTags?.find(t => t.property?.toLowerCase() === 'og:description')?.content
+  const actualDescription = descriptionFromMeta || ogDescFromMeta || textContent.description || ''
+
+  // Also get title from Firecrawl metadata if available
+  const actualTitle = pageCode.metadata?.title || textContent.title || ''
+
+  // DEBUG: Log what we found
+  console.log(`[AI] META DEBUG:`)
+  console.log(`  - Title from metadata: ${pageCode.metadata?.title ? pageCode.metadata.title.substring(0, 50) + '...' : 'NOT FOUND'}`)
+  console.log(`  - Title from textContent: ${textContent.title ? textContent.title.substring(0, 50) + '...' : 'NOT FOUND'}`)
+  console.log(`  - Description from metaTags: ${descriptionFromMeta ? descriptionFromMeta.substring(0, 50) + '...' : 'NOT FOUND'}`)
+  console.log(`  - Description from og:description: ${ogDescFromMeta ? ogDescFromMeta.substring(0, 50) + '...' : 'NOT FOUND'}`)
+  console.log(`  - Description from textContent: ${textContent.description ? textContent.description.substring(0, 50) + '...' : 'EMPTY'}`)
+  console.log(`  - Using title: ${actualTitle ? actualTitle.substring(0, 50) + '...' : 'NONE'}`)
+  console.log(`  - Using description: ${actualDescription ? actualDescription.substring(0, 50) + '...' : 'NONE'}`)
+
   // Format headings with question indicator
   const formattedHeadings = textContent.headings.map(h =>
     `${h.level.toUpperCase()}: "${h.text}"${h.isQuestion ? ' [FRAGE]' : ''}`
@@ -308,9 +326,9 @@ URL: ${url}
 GRUNDLEGENDE INFORMATIONEN
 ═══════════════════════════════════════════
 
-**Titel:** ${textContent.title || 'FEHLT!'}
+**Titel:** ${actualTitle || 'FEHLT!'}
 **H1:** ${textContent.h1 || 'KEINE H1 GEFUNDEN!'}
-**Meta-Description:** ${textContent.description || 'FEHLT!'}
+**Meta-Description:** ${actualDescription || 'FEHLT!'}
 
 ═══════════════════════════════════════════
 ÜBERSCHRIFTEN-ANALYSE (${textContent.headingAnalysis.total} gefunden)
