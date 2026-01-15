@@ -140,7 +140,7 @@ export function CompetitorComparison() {
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2 hover:bg-muted/80 dark:hover:bg-muted/50">
           <BarChart3 className="h-4 w-4" />
           Wettbewerbs-Vergleich
         </Button>

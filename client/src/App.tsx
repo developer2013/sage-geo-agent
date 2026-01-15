@@ -6,7 +6,6 @@ import { AnalysisResult } from '@/components/AnalysisResult'
 import { HistoryPanel } from '@/components/HistoryPanel'
 import { LoadingAnimation } from '@/components/LoadingAnimation'
 import { ChatPanel } from '@/components/ChatPanel'
-import { CompetitorComparison } from '@/components/CompetitorComparison'
 import { Card, CardContent } from '@/components/ui/card'
 import { Toaster } from '@/components/ui/sonner'
 import { Sparkles } from 'lucide-react'
@@ -167,14 +166,7 @@ function App() {
 
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-5xl">
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-start">
-            <div className="flex-1 w-full">
-              <UrlInput onAnalyze={handleAnalyze} isLoading={isLoading} />
-            </div>
-            <div className="sm:pt-0 pt-2">
-              <CompetitorComparison />
-            </div>
-          </div>
+          <UrlInput onAnalyze={handleAnalyze} isLoading={isLoading} />
 
           {/* Loading Animation */}
           <LoadingAnimation isLoading={isLoading} progress={progress} />
