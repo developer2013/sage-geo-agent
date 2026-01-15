@@ -88,7 +88,7 @@ Score = (helpful + implemented×2 - dismissed×0.5) / total
 
 ### 5. Wettbewerbs-Vergleich
 
-**Ort:** Neben URL-Eingabefeld → "Wettbewerbs-Vergleich" Button
+**Ort:** Header-Menü → links neben der Glocke (🔔)
 
 **Funktionen:**
 - Mehrere URLs gleichzeitig vergleichen (bis zu 5)
@@ -237,6 +237,79 @@ const excludedDomains = [
 
 ---
 
+### Fix 6: Meta-Description in AI-Analyse
+
+**Problem:** AI-Analyse meldete "Meta-Description fehlt komplett", obwohl 54 Meta-Tags extrahiert wurden.
+
+**Ursache:** `extractTextContent()` suchte Meta-Description in `pageCode.html` (Main-Content ohne `<head>`), während Meta-Tags korrekt aus `rawHtml` extrahiert wurden.
+
+**Lösung:**
+- Description direkt aus `pageCode.metaTags` holen (extrahiert aus rawHtml)
+- Fallback auf og:description wenn name=description fehlt
+- Debug-Logging für Meta-Tag-Pipeline
+
+**Commit:** `45e1af1`
+
+**Datei:** `server/services/aiService.js`
+
+```javascript
+// FIX: Get description from metaTags (extracted from rawHtml)
+const descriptionFromMeta = pageCode.metaTags?.find(t => t.name?.toLowerCase() === 'description')?.content
+const ogDescFromMeta = pageCode.metaTags?.find(t => t.property?.toLowerCase() === 'og:description')?.content
+const actualDescription = descriptionFromMeta || ogDescFromMeta || textContent.description || ''
+```
+
+---
+
+### Fix 7: Content-Statistiken (Wörter, Links, Lesezeit)
+
+**Problem:** Statistiken waren stark überhöht:
+- Wörter: 16.206 statt ~4.300 (tatsächlich)
+- Lesezeit: ~82 Min statt ~21 Min
+- Interne Links: 115 statt ~13 (echte Navigation)
+
+**Ursache:**
+- Wörter: Navigation, Footer, versteckte Elemente wurden mitgezählt
+- Links: Hash-Anchors (`#gate-xxx`) auf gleicher Seite wurden als interne Links gezählt
+
+**Lösung:**
+- Entferne nav, header, footer, hidden Elements vor Wortzählung
+- Bevorzuge Main-Content-Bereiche (main, article, [role="main"])
+- Überspringe Self-Referencing Links (gleiche Seite mit Hash)
+- Filtere sehr lange "Wörter" (encoded data)
+
+**Commit:** `a8eeea1`
+
+**Datei:** `server/routes/analyze.js`
+
+```javascript
+// Remove non-content elements
+$('nav, header, footer, .nav, .navigation, .header, .footer, .menu, .sidebar').remove()
+$('[hidden], [style*="display: none"], .hidden').remove()
+
+// Prefer main content areas
+const mainContent = $('main, article, [role="main"], .content').first()
+
+// Skip self-referencing links
+if (isInternal && linkUrl.pathname === basePath) {
+  return // This is just an in-page anchor link
+}
+```
+
+---
+
+### Fix 8: Button Hover-Effekt
+
+**Problem:** Outline-Buttons hatten keinen sichtbaren Hover-Effekt (zu weiß).
+
+**Lösung:** `hover:bg-muted` zur outline-Variante hinzugefügt.
+
+**Commit:** `fcf6eda`
+
+**Datei:** `client/src/components/ui/button.tsx`
+
+---
+
 ## Datenbank-Erweiterungen
 
 ### Neue Tabellen
@@ -309,6 +382,10 @@ CREATE TABLE recommendation_stats (
 
 **Alle Commits gepusht und deployed:**
 ```
+fcf6eda Fix: Add visible hover background to outline buttons
+a8eeea1 Fix: Accurate word count and link statistics
+122731a Move Wettbewerbs-Vergleich button to header menu
+45e1af1 Fix: Use metaTags from rawHtml for title/description in AI analysis
 ff2b441 Fix: Handle missing analysis in chat message saving
 d008a70 Fix: Exclude mailto/tel/sms links from link statistics
 c304280 Fix: Use rawHtml from Firecrawl for meta tag extraction
@@ -322,10 +399,14 @@ e5e885a fix: Add forwardRef to Badge component for Radix UI compatibility
 ## Hinweise für Tests
 
 1. **Meta-Tags testen:** Neue Analyse durchführen (alte sind gecacht ohne rawHtml)
-2. **Link-Zählung:** Seiten mit mailto:/tel: Links analysieren
-3. **Score-Monitoring:** URL im Glocken-Menü hinzufügen
-4. **Chat:** Sollte jetzt auch mit alten Analysen funktionieren (ohne FOREIGN KEY Error)
-5. **Feedback:** Bei Empfehlungen "Hilfreich" oder "Umgesetzt" klicken
+2. **Meta-Description:** Sollte jetzt in Stärken/Schwächen korrekt erkannt werden
+3. **Content-Statistiken:** Wörter und Links sollten jetzt realistisch sein (~4k statt ~16k)
+4. **Link-Zählung:** Hash-Anchors (#...) werden nicht mehr als interne Links gezählt
+5. **Score-Monitoring:** URL im Glocken-Menü hinzufügen
+6. **Wettbewerbs-Vergleich:** Jetzt im Header-Menü (links neben Glocke)
+7. **Button Hover:** Alle Buttons sollten sichtbaren Hover-Effekt haben
+8. **Chat:** Sollte jetzt auch mit alten Analysen funktionieren (ohne FOREIGN KEY Error)
+9. **Feedback:** Bei Empfehlungen "Hilfreich" oder "Umgesetzt" klicken
 
 ---
 
@@ -338,4 +419,5 @@ e5e885a fix: Add forwardRef to Badge component for Radix UI compatibility
 ---
 
 *Erstellt: 15. Januar 2026*
-*Version: 2.0.0*
+*Zuletzt aktualisiert: 15. Januar 2026, 17:15 Uhr*
+*Version: 2.1.0*
