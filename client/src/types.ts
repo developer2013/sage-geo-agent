@@ -82,6 +82,7 @@ export interface AnalysisResult {
   tableAnalysis?: TableAnalysis | null
   contentStats?: ContentStats | null
   performanceMetrics?: PerformanceMetrics | null
+  serpAnalysis?: SerpAnalysis | null
   cached?: boolean
 }
 
@@ -121,4 +122,46 @@ export interface PerformanceMetrics {
     total: number
   }
   suggestions: string[]
+}
+
+// SERP Click-Worthiness Analysis Types
+export interface SerpMetric {
+  score: number
+  label: string
+  issues: string[]
+  suggestions: string[]
+}
+
+export interface AttentionTrigger {
+  keyword: string
+  found: boolean
+  location: 'title' | 'description' | 'both' | 'none'
+}
+
+export interface SerpRecommendation {
+  priority: 'HOCH' | 'MITTEL' | 'NIEDRIG'
+  action: string
+  currentValue?: string
+  suggestedValue?: string
+}
+
+export interface SerpAnalysis {
+  clickWorthinessScore: number
+  metrics: {
+    titleQuality: SerpMetric
+    descriptionQuality: SerpMetric
+    b2bSignals: SerpMetric
+    trustTriggers: SerpMetric
+    featureClarity: SerpMetric
+    videoContent: SerpMetric
+  }
+  attentionTriggers: AttentionTrigger[]
+  serpPreview: {
+    title: string
+    displayUrl: string
+    description: string
+    truncatedTitle: boolean
+    truncatedDescription: boolean
+  }
+  recommendations: SerpRecommendation[]
 }

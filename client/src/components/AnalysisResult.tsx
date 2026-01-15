@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle, XCircle, Lightbulb, Code, BarChart3, Gauge, History } from 'lucide-react'
+import { CheckCircle, XCircle, Lightbulb, Code, BarChart3, Gauge, History, Search } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { GeoScore } from './GeoScore'
@@ -12,6 +12,7 @@ import { PerformanceMetricsCard } from './PerformanceMetricsCard'
 import { CitationProbability } from './CitationProbability'
 import { ExportButton } from './ExportButton'
 import { VersionHistory } from './VersionHistory'
+import { SerpTab } from './SerpTab'
 import type { AnalysisResult as AnalysisResultType } from '@/types'
 
 interface AnalysisResultProps {
@@ -60,7 +61,7 @@ export function AnalysisResult({ result }: AnalysisResultProps) {
       <GeoScore score={result.geoScore} summary={result.scoreSummary} />
 
       <Tabs defaultValue="strengths" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
+        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 gap-1">
           <TabsTrigger value="strengths" className="flex items-center gap-1 text-xs sm:text-sm">
             <CheckCircle className="h-4 w-4" />
             <span className="hidden sm:inline">Staerken</span>
@@ -75,6 +76,10 @@ export function AnalysisResult({ result }: AnalysisResultProps) {
             <Lightbulb className="h-4 w-4" />
             <span className="hidden sm:inline">Empfehlungen</span>
             <span className="sm:hidden">{result.recommendations.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="serp" className="flex items-center gap-1 text-xs sm:text-sm">
+            <Search className="h-4 w-4" />
+            <span className="hidden sm:inline">SERP</span>
           </TabsTrigger>
           <TabsTrigger value="stats" className="flex items-center gap-1 text-xs sm:text-sm">
             <BarChart3 className="h-4 w-4" />
@@ -103,6 +108,16 @@ export function AnalysisResult({ result }: AnalysisResultProps) {
             recommendations={result.recommendations}
             nextStep={result.nextStep}
           />
+        </TabsContent>
+
+        <TabsContent value="serp" className="mt-4">
+          {result.serpAnalysis ? (
+            <SerpTab serpAnalysis={result.serpAnalysis} pageCode={result.pageCode} />
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              Keine SERP-Daten verfuegbar.
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="stats" className="mt-4 space-y-4">

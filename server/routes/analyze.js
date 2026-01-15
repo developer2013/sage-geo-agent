@@ -4,6 +4,7 @@ import * as cheerio from 'cheerio'
 import { fetchPageContent } from '../services/scraperService.js'
 import { analyzeWithClaude } from '../services/aiService.js'
 import { saveAnalysis, getRecentAnalysisByUrl, updateMonitoredUrlScore } from '../services/dbService.js'
+import { analyzeSerpFactors } from '../services/serpService.js'
 
 const router = express.Router()
 
@@ -325,6 +326,11 @@ router.post('/stream', async (req, res) => {
     const contentStats = calculateContentStats(pageCode.html, validUrl.href)
     const performanceMetrics = calculatePerformanceMetrics(pageCode.html, contentStats)
 
+    // Calculate SERP click-worthiness analysis
+    const title = pageCode.metadata?.title || ''
+    const description = pageCode.metaTags?.find(t => t.name === 'description')?.content || ''
+    const serpAnalysis = analyzeSerpFactors(title, description, validUrl.href, pageCode.schemaMarkup)
+
     const analysis = {
       id: uuidv4(),
       url: validUrl.href,
@@ -340,6 +346,7 @@ router.post('/stream', async (req, res) => {
       tableAnalysis: analysisResult.tableAnalysis || null,
       contentStats,
       performanceMetrics,
+      serpAnalysis,
       pageCode: {
         html: pageCode.html,
         markdown: pageCode.markdown || null,  // For better Claude chat context
@@ -415,6 +422,11 @@ router.post('/', async (req, res) => {
     const contentStats = calculateContentStats(pageCode.html, validUrl.href)
     const performanceMetrics = calculatePerformanceMetrics(pageCode.html, contentStats)
 
+    // Calculate SERP click-worthiness analysis
+    const title = pageCode.metadata?.title || ''
+    const description = pageCode.metaTags?.find(t => t.name === 'description')?.content || ''
+    const serpAnalysis = analyzeSerpFactors(title, description, validUrl.href, pageCode.schemaMarkup)
+
     const analysis = {
       id: uuidv4(),
       url: validUrl.href,
@@ -430,6 +442,7 @@ router.post('/', async (req, res) => {
       tableAnalysis: analysisResult.tableAnalysis || null,
       contentStats,
       performanceMetrics,
+      serpAnalysis,
       pageCode: {
         html: pageCode.html,
         markdown: pageCode.markdown || null,  // For better Claude chat context
