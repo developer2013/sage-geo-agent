@@ -9,6 +9,7 @@ const router = express.Router()
 
 /**
  * Calculate content statistics from HTML
+ * Uses deduplication to count unique images and links only
  */
 function calculateContentStats(html, baseUrl) {
   const $ = cheerio.load(html)
@@ -21,52 +22,109 @@ function calculateContentStats(html, baseUrl) {
   const words = textContent.split(/\s+/).filter(w => w.length > 0)
   const wordCount = words.length
 
-  // Count images
-  const images = $('img')
-  const imageCount = images.length
+  // Domains to exclude (YouTube embeds, tracking pixels, etc.)
+  const excludedDomains = [
+    'youtube.com', 'youtu.be', 'ytimg.com',
+    'google-analytics.com', 'googletagmanager.com',
+    'facebook.com', 'twitter.com', 'linkedin.com',
+    'doubleclick.net', 'googlesyndication.com'
+  ]
+
+  const isExcludedUrl = (url) => {
+    if (!url) return true
+    // Exclude data URIs and empty sources
+    if (url.startsWith('data:') || url === '') return true
+    // Exclude tracking pixels (1x1 images)
+    if (url.includes('1x1') || url.includes('pixel')) return true
+    // Exclude YouTube and other embed domains
+    try {
+      const hostname = new URL(url, baseUrl).hostname
+      return excludedDomains.some(domain => hostname.includes(domain))
+    } catch {
+      return false
+    }
+  }
+
+  // Count unique images (deduplicated, excluding embeds/tracking)
+  const uniqueImageUrls = new Set()
   let imagesWithAlt = 0
   let imagesWithoutAlt = 0
 
-  images.each((_, img) => {
-    const alt = $(img).attr('alt')
-    if (alt && alt.trim().length > 0) {
-      imagesWithAlt++
-    } else {
-      imagesWithoutAlt++
+  $('img').each((_, img) => {
+    const src = $(img).attr('src') || $(img).attr('data-src')
+    if (!src || isExcludedUrl(src)) return
+
+    // Normalize URL for deduplication
+    let normalizedSrc = src
+    try {
+      const urlObj = new URL(src, baseUrl)
+      // Remove query params for deduplication (same image, different size params)
+      normalizedSrc = urlObj.origin + urlObj.pathname
+    } catch {
+      normalizedSrc = src
+    }
+
+    if (!uniqueImageUrls.has(normalizedSrc)) {
+      uniqueImageUrls.add(normalizedSrc)
+      const alt = $(img).attr('alt')
+      if (alt && alt.trim().length > 0) {
+        imagesWithAlt++
+      } else {
+        imagesWithoutAlt++
+      }
     }
   })
 
-  // Count links (internal vs external)
-  let internalLinks = 0
-  let externalLinks = 0
+  const imageCount = uniqueImageUrls.size
+
+  // Count unique links (deduplicated)
+  const uniqueInternalLinks = new Set()
+  const uniqueExternalLinks = new Set()
 
   try {
     const baseHost = new URL(baseUrl).hostname
     $('a[href]').each((_, link) => {
       const href = $(link).attr('href')
-      if (href) {
-        try {
-          // Handle relative URLs
-          if (href.startsWith('/') || href.startsWith('#') || !href.includes('://')) {
-            internalLinks++
-          } else {
-            const linkHost = new URL(href).hostname
-            if (linkHost === baseHost || linkHost.endsWith('.' + baseHost)) {
-              internalLinks++
-            } else {
-              externalLinks++
-            }
-          }
-        } catch {
-          // Invalid URL, count as internal
-          internalLinks++
+      if (!href || href === '#' || href.startsWith('javascript:')) return
+      if (isExcludedUrl(href)) return
+
+      try {
+        let normalizedHref = href
+        let isInternal = false
+
+        // Handle relative URLs
+        if (href.startsWith('/') || !href.includes('://')) {
+          isInternal = true
+          normalizedHref = href.split('?')[0].split('#')[0] // Remove query/hash
+        } else {
+          const linkUrl = new URL(href)
+          const linkHost = linkUrl.hostname
+          isInternal = linkHost === baseHost || linkHost.endsWith('.' + baseHost)
+          normalizedHref = linkUrl.origin + linkUrl.pathname
         }
+
+        if (isInternal) {
+          uniqueInternalLinks.add(normalizedHref)
+        } else {
+          uniqueExternalLinks.add(normalizedHref)
+        }
+      } catch {
+        // Invalid URL, count as internal
+        uniqueInternalLinks.add(href)
       }
     })
   } catch {
-    // If baseUrl parsing fails, just count all links
-    internalLinks = $('a[href]').length
+    // If baseUrl parsing fails, just count all links as internal
+    $('a[href]').each((_, link) => {
+      const href = $(link).attr('href')
+      if (href && href !== '#') {
+        uniqueInternalLinks.add(href)
+      }
+    })
   }
+
+  const internalLinks = uniqueInternalLinks.size
+  const externalLinks = uniqueExternalLinks.size
 
   // Count headings
   const headingStructure = {
