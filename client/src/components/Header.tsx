@@ -1,5 +1,6 @@
 import { Sparkles, History, Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ScoreMonitor } from './ScoreMonitor'
 
 interface HeaderProps {
   onHistoryClick: () => void
@@ -26,6 +27,7 @@ export function Header({ onHistoryClick, darkMode, onToggleDarkMode }: HeaderPro
         </div>
 
         <div className="flex items-center gap-3">
+          <ScoreMonitor />
           <Button variant="outline" size="icon" onClick={onToggleDarkMode}>
             {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>

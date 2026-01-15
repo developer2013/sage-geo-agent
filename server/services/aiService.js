@@ -26,6 +26,22 @@ GEO ist der strategische Prozess, Inhalte so zu gestalten, dass sie von KI-Syste
 ### Was NICHT funktioniert:
 - **Keyword Stuffing**: -10% Sichtbarkeit (wird aktiv bestraft!)
 
+## Impact-Referenz für Empfehlungen (NUTZE DIESE FÜR "impact" FELD!)
+
+| Maßnahme | Impact Level | Prozent | Quelle |
+|----------|--------------|---------|--------|
+| Statistiken mit Quellen hinzufügen | HOCH | +30-40% | Princeton GEO-BENCH |
+| Zitate einbauen | HOCH | +30-40% | Princeton GEO-BENCH |
+| Quellenangaben hinzufügen | HOCH | +30-40% | Princeton GEO-BENCH |
+| Direct Answer in ersten 40-60 Worten | HOCH | +10-20% | Best Practice |
+| FAQ-Section mit Schema | MITTEL | +10-15% | Google Guidelines |
+| Autor mit Bio (E-E-A-T) | MITTEL | +5-10% | Google Guidelines |
+| Fluency + Stats Kombination | MITTEL | +5.5% | Princeton GEO-BENCH |
+| Heading-Optimierung (Fragen) | MITTEL | +5-10% | Best Practice |
+| Schema Markup allgemein | NIEDRIG | Variabel | Kontrovers diskutiert |
+| Alt-Texte für Bilder | NIEDRIG | +1-3% | Accessibility Standards |
+| Keyword-Platzierung (nicht Stuffing) | NIEDRIG | Variabel | Best Practice |
+
 ### Wichtige Statistiken:
 - 0,65 Korrelation zwischen Google-Seite-1-Rankings und LLM-Erwähnungen
 - Citation frequency = ~35% der AI Answer Inclusions
@@ -150,7 +166,16 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
     {"priority": "KRITISCH|MITTEL|NIEDRIG", "title": "<Problem>", "description": "<Auswirkung auf KI-Sichtbarkeit>"}
   ],
   "recommendations": [
-    {"timeframe": "SOFORT|KURZFRISTIG|MITTELFRISTIG", "action": "<Konkrete Maßnahme>", "reason": "<Begründung mit Fakten>"}
+    {
+      "timeframe": "SOFORT|KURZFRISTIG|MITTELFRISTIG",
+      "action": "<Konkrete Maßnahme>",
+      "reason": "<Begründung mit Fakten>",
+      "impact": {
+        "level": "HOCH|MITTEL|NIEDRIG",
+        "percentage": "<z.B. '+30-40%' oder '+5-10%' oder 'Variabel'>",
+        "source": "<z.B. 'Princeton GEO-BENCH' oder 'Google Guidelines' oder 'Best Practice'>"
+      }
+    }
   ],
   "nextStep": "<Ein sofort umsetzbarer Schritt>",
   "imageAnalysis": {
@@ -407,6 +432,25 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
     return fallback
   }
 
+  // Valid media types for Claude Vision API
+  const VALID_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+  // Check if media type is valid for Claude
+  function isValidMediaType(mediaType) {
+    return VALID_MEDIA_TYPES.includes(mediaType)
+  }
+
+  // Normalize media type (handle variations like image/jpg)
+  function normalizeMediaType(mediaType) {
+    if (!mediaType) return null
+    const normalized = mediaType.toLowerCase().split(';')[0].trim()
+
+    // Handle jpeg variations
+    if (normalized === 'image/jpg') return 'image/jpeg'
+
+    return normalized
+  }
+
   // Build message content array
   const messageContent = []
 
@@ -417,40 +461,49 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
     console.log('[AI] Screenshot length:', String(pageCode.screenshot).length)
 
     const cleanedScreenshot = cleanBase64(pageCode.screenshot)
-    if (cleanedScreenshot) {
-      console.log('[AI] Adding cleaned screenshot, length:', cleanedScreenshot.length)
+    const screenshotMediaType = normalizeMediaType(getMediaType(pageCode.screenshot))
+
+    if (cleanedScreenshot && isValidMediaType(screenshotMediaType)) {
+      console.log('[AI] Adding cleaned screenshot, type:', screenshotMediaType, 'length:', cleanedScreenshot.length)
       messageContent.push({
         type: 'image',
         source: {
           type: 'base64',
-          media_type: getMediaType(pageCode.screenshot),
+          media_type: screenshotMediaType,
           data: cleanedScreenshot,
         },
       })
     } else {
-      console.log('[AI] Screenshot skipped - invalid base64')
+      console.log('[AI] Screenshot skipped - invalid base64 or unsupported type:', screenshotMediaType)
     }
   }
 
-  // Add individual images if available (skip for now to debug)
+  // Add individual images if available (with media type validation)
   if (pageCode.images && pageCode.images.length > 0) {
     console.log(`[AI] Found ${pageCode.images.length} images, validating...`)
     let addedImages = 0
+    let skippedImages = 0
     for (const img of pageCode.images.slice(0, 3)) {
       const cleanedData = cleanBase64(img.base64)
-      if (cleanedData && img.mediaType) {
+      const normalizedType = normalizeMediaType(img.mediaType)
+
+      if (cleanedData && isValidMediaType(normalizedType)) {
+        console.log(`[AI] Adding image with type: ${normalizedType}`)
         messageContent.push({
           type: 'image',
           source: {
             type: 'base64',
-            media_type: img.mediaType,
+            media_type: normalizedType,
             data: cleanedData,
           },
         })
         addedImages++
+      } else {
+        console.log(`[AI] Skipping image with invalid/unsupported type: ${img.mediaType}`)
+        skippedImages++
       }
     }
-    console.log(`[AI] Added ${addedImages} valid images`)
+    console.log(`[AI] Added ${addedImages} valid images, skipped ${skippedImages} unsupported`)
   }
 
   // Add text content

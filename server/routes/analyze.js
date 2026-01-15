@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import * as cheerio from 'cheerio'
 import { fetchPageContent } from '../services/scraperService.js'
 import { analyzeWithClaude } from '../services/aiService.js'
-import { saveAnalysis, getRecentAnalysisByUrl } from '../services/dbService.js'
+import { saveAnalysis, getRecentAnalysisByUrl, updateMonitoredUrlScore } from '../services/dbService.js'
 
 const router = express.Router()
 
@@ -243,14 +243,23 @@ router.post('/stream', async (req, res) => {
       performanceMetrics,
       pageCode: {
         html: pageCode.html,
+        markdown: pageCode.markdown || null,  // For better Claude chat context
         metaTags: pageCode.metaTags,
         schemaMarkup: pageCode.schemaMarkup,
         robotsTxt: pageCode.robotsTxt,
+        metadata: pageCode.metadata || null,  // Title, description from Firecrawl
         usedFirecrawl: pageCode.usedFirecrawl || false
       }
     }
 
     saveAnalysis(analysis)
+
+    // Update monitored URL score if being tracked
+    const monitorResult = updateMonitoredUrlScore(analysis.url, analysis.geoScore)
+    if (monitorResult?.alerted) {
+      console.log(`[Monitor] Alert created for ${analysis.url}: ${monitorResult.change > 0 ? '+' : ''}${monitorResult.change} (${monitorResult.alertType})`)
+    }
+
     console.log(`Analysis complete: ${validUrl.href} - Score: ${analysis.geoScore}`)
 
     res.write(`data: ${JSON.stringify({ type: 'complete', analysis })}\n\n`)
@@ -317,14 +326,23 @@ router.post('/', async (req, res) => {
       performanceMetrics,
       pageCode: {
         html: pageCode.html,
+        markdown: pageCode.markdown || null,  // For better Claude chat context
         metaTags: pageCode.metaTags,
         schemaMarkup: pageCode.schemaMarkup,
         robotsTxt: pageCode.robotsTxt,
+        metadata: pageCode.metadata || null,  // Title, description from Firecrawl
         usedFirecrawl: pageCode.usedFirecrawl || false
       }
     }
 
     saveAnalysis(analysis)
+
+    // Update monitored URL score if being tracked
+    const monitorResult = updateMonitoredUrlScore(analysis.url, analysis.geoScore)
+    if (monitorResult?.alerted) {
+      console.log(`[Monitor] Alert created for ${analysis.url}: ${monitorResult.change > 0 ? '+' : ''}${monitorResult.change} (${monitorResult.alertType})`)
+    }
+
     console.log(`Analysis complete: ${validUrl.href} - Score: ${analysis.geoScore}`)
 
     res.json(analysis)

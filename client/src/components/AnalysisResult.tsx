@@ -1,5 +1,7 @@
-import { CheckCircle, XCircle, Lightbulb, Code, BarChart3, Gauge } from 'lucide-react'
+import { useState } from 'react'
+import { CheckCircle, XCircle, Lightbulb, Code, BarChart3, Gauge, History } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
 import { GeoScore } from './GeoScore'
 import { StrengthsList } from './StrengthsList'
 import { WeaknessesList } from './WeaknessesList'
@@ -7,7 +9,9 @@ import { Recommendations } from './Recommendations'
 import { CodeViewer } from './CodeViewer'
 import { ContentStatsCard } from './ContentStatsCard'
 import { PerformanceMetricsCard } from './PerformanceMetricsCard'
+import { CitationProbability } from './CitationProbability'
 import { ExportButton } from './ExportButton'
+import { VersionHistory } from './VersionHistory'
 import type { AnalysisResult as AnalysisResultType } from '@/types'
 
 interface AnalysisResultProps {
@@ -15,6 +19,8 @@ interface AnalysisResultProps {
 }
 
 export function AnalysisResult({ result }: AnalysisResultProps) {
+  const [showHistory, setShowHistory] = useState(false)
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between gap-4">
@@ -32,9 +38,24 @@ export function AnalysisResult({ result }: AnalysisResultProps) {
               minute: '2-digit',
             })}
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHistory(true)}
+            className="gap-1"
+          >
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline">Historie</span>
+          </Button>
           <ExportButton result={result} />
         </div>
       </div>
+
+      <VersionHistory
+        url={result.url}
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+      />
 
       <GeoScore score={result.geoScore} summary={result.scoreSummary} />
 
@@ -84,9 +105,12 @@ export function AnalysisResult({ result }: AnalysisResultProps) {
           />
         </TabsContent>
 
-        <TabsContent value="stats" className="mt-4">
+        <TabsContent value="stats" className="mt-4 space-y-4">
           {result.contentStats ? (
-            <ContentStatsCard stats={result.contentStats} />
+            <>
+              <ContentStatsCard stats={result.contentStats} />
+              <CitationProbability result={result} />
+            </>
           ) : (
             <div className="text-center text-muted-foreground py-8">
               Keine Statistiken verfuegbar.

@@ -1,0 +1,100 @@
+Sage Audience Knowledge Document  
+Format: Plain Text | Updated: July 2025  
+Source: Internal research, brand strategy, and campaign planning files  
+
+---
+
+# CORE TARGET AUDIENCES
+
+### 1. Small Business Leaders
+- **Role**: Owner or senior decision-maker in small businesses (typically <50 employees).
+- **Current Focus**: Managing daily operations, financial admin, and compliance.
+- **Emerging Needs**:
+  - Automation to reduce administrative burden  
+  - Strategic insights to support growth  
+  - Tools that are intuitive, mobile-friendly, and low-touch  
+- **Messaging Guidance**:
+  - Use empathetic, empowering language  
+  - Emphasize simplicity, time-saving, and confidence  
+  - Avoid jargon; focus on outcomes like "more time for your business"  
+
+---
+
+### 2. Mid-sized CFOs (Finance Leaders)
+- **Role**: CFOs or senior finance professionals in mid-sized companies
+- **Current Focus**: Compliance, reporting, and cost control
+- **Emerging Needs**:
+  - Real-time data and predictive analytics  
+  - Strategic planning and scenario modeling  
+  - Integration across finance, HR, and operations  
+- **Messaging Guidance**:
+  - Highlight control, visibility, and foresight  
+  - Use data-backed language and emphasize trust and security  
+  - Position Sage as a strategic partner, not just a software vendor  
+
+---
+
+### 3. CPOs / HR Leaders
+- **Role**: Chief People Officers or HR Directors
+- **Current Focus**: Talent acquisition, retention, and compliance
+- **Emerging Needs**:
+  - Strategic workforce planning  
+  - Employee engagement and wellbeing  
+  - DEI and culture-building tools  
+- **Messaging Guidance**:
+  - Use human, inclusive language  
+  - Emphasize employee experience and leadership enablement  
+  - Position Sage as a partner in building future-ready teams  
+
+---
+
+### 4. Accountants
+- **Role**: External accountants, bookkeepers, and in-house finance teams
+- **Current Focus**: Bookkeeping, tax filing, and compliance
+- **Emerging Needs**:
+  - Shift to advisory services  
+  - Automation of repetitive tasks  
+  - Tools that enhance client relationships  
+- **Messaging Guidance**:
+  - Reinforce trust, accuracy, and efficiency  
+  - Emphasize how Sage Copilot supports advisory work  
+  - Use confident, professional tone with clear benefits  
+
+---
+
+# AFFILIATE AUDIENCES
+
+### 1. Partners
+- **Types**: Resellers, referral partners, distributors
+- **Responsibilities**:
+  - Onboard and support customers  
+  - Offer value-added services (consulting, training, integration)  
+- **Motivations**:
+  - Increase customer lifetime value  
+  - Build IP through integrated apps or add-ons  
+  - Strengthen brand credibility via Sage affiliation  
+- **Messaging Guidance**:
+  - Use collaborative, opportunity-driven language  
+  - Emphasize enablement, co-marketing, and shared success  
+  - Reinforce Sage’s commitment to partner growth  
+
+---
+
+### 2. Developers
+- **Role**: Build integrations, apps, and custom features on Sage platforms
+- **Motivations**:
+  - Innovation and technical challenge  
+  - Access to Sage’s ecosystem and customer base  
+- **Messaging Guidance**:
+  - Use precise, technical language  
+  - Emphasize open APIs, documentation, and community support  
+  - Highlight opportunities to scale and monetize  
+
+---
+
+# STRATEGIC INSIGHTS
+
+- All audiences are increasingly influenced by AI, automation, and data-driven decision-making.  
+- Sage’s brand tone should remain **Human**, **Bold**, **Trustworthy**, and **Simple** across all audiences and channels.  
+- Messaging should reflect **audience-specific pain points** while positioning Sage as a **trusted enabler of growth and transformation**.
+

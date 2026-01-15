@@ -1,4 +1,4 @@
-import { Zap, Clock, Calendar } from 'lucide-react'
+import { Zap, Clock, Calendar, TrendingUp, Star } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -7,6 +7,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { FeedbackButtons } from './FeedbackButtons'
 import type { Recommendation } from '@/types'
 
 interface RecommendationsProps {
@@ -35,6 +42,42 @@ export function Recommendations({ recommendations, nextStep }: RecommendationsPr
       default:
         return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
     }
+  }
+
+  const getImpactBadgeClass = (level?: string) => {
+    switch (level) {
+      case 'HOCH':
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200'
+      case 'MITTEL':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200'
+      case 'NIEDRIG':
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-400 border-gray-200'
+      default:
+        return 'bg-gray-100 text-gray-500 dark:bg-gray-800/30 dark:text-gray-400'
+    }
+  }
+
+  const getImpactStars = (level?: string) => {
+    switch (level) {
+      case 'HOCH':
+        return 3
+      case 'MITTEL':
+        return 2
+      case 'NIEDRIG':
+        return 1
+      default:
+        return 0
+    }
+  }
+
+  // Generate a stable recommendation type ID from the action text
+  const getRecommendationType = (action: string): string => {
+    return action
+      .toLowerCase()
+      .replace(/[äöü]/g, match => ({ 'ä': 'ae', 'ö': 'oe', 'ü': 'ue' }[match] || match))
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '')
+      .substring(0, 50)
   }
 
   const groupedRecommendations = {
@@ -82,10 +125,41 @@ export function Recommendations({ recommendations, nextStep }: RecommendationsPr
                   {recs.map((rec, index) => (
                     <Card key={index}>
                       <CardContent className="pt-4">
-                        <h5 className="font-medium">{rec.action}</h5>
+                        <div className="flex items-start justify-between gap-2">
+                          <h5 className="font-medium flex-1">{rec.action}</h5>
+                          {rec.impact && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant="outline"
+                                    className={`${getImpactBadgeClass(rec.impact.level)} flex items-center gap-1 shrink-0`}
+                                  >
+                                    <TrendingUp className="h-3 w-3" />
+                                    <span>{rec.impact.percentage}</span>
+                                    <span className="flex">
+                                      {Array.from({ length: getImpactStars(rec.impact.level) }).map((_, i) => (
+                                        <Star key={i} className="h-3 w-3 fill-current" />
+                                      ))}
+                                    </span>
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium">Impact: {rec.impact.level}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Quelle: {rec.impact.source}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1">
                           {rec.reason}
                         </p>
+                        <FeedbackButtons
+                          recommendationType={getRecommendationType(rec.action)}
+                        />
                       </CardContent>
                     </Card>
                   ))}

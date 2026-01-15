@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MessageCircle, Send, Loader2, User, Bot, Sparkles } from 'lucide-react'
+import { BrandSettings, defaultBrandSettings, type BrandSettingsState } from './BrandSettings'
 import type { AnalysisResult } from '@/types'
 
 interface Message {
@@ -32,6 +33,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [currentTool, setCurrentTool] = useState<string | null>(null)
   const [streamingContent, setStreamingContent] = useState('')
+  const [brandSettings, setBrandSettings] = useState<BrandSettingsState>(defaultBrandSettings)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Load chat history when analysis changes
@@ -93,6 +95,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
             recommendations: analysis.recommendations,
           },
           history: messages,
+          brandSettings: brandSettings.useSageBrand ? brandSettings : undefined,
         }),
       })
 
@@ -353,6 +356,9 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
             )}
           </div>
         </ScrollArea>
+
+        {/* Brand Settings */}
+        <BrandSettings settings={brandSettings} onChange={setBrandSettings} />
 
         {/* Input */}
         <div className="flex gap-3">

@@ -2,6 +2,7 @@ import express from 'express'
 import Anthropic from '@anthropic-ai/sdk'
 import { saveChatMessage, getChatMessages } from '../services/dbService.js'
 import { scrapeWithFirecrawl, isFirecrawlAvailable, searchWithFirecrawl, fetchSitemap } from '../services/firecrawlService.js'
+import { getBrandPromptAddition } from '../services/prompts/brandPrompt.js'
 
 const router = express.Router()
 
@@ -407,7 +408,7 @@ router.post('/stream', async (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no')
 
   try {
-    const { message, analysisId, context, history = [] } = req.body
+    const { message, analysisId, context, history = [], brandSettings } = req.body
 
     if (!message || !analysisId) {
       res.write(`data: ${JSON.stringify({ error: 'Nachricht und Analyse-ID sind erforderlich' })}\n\n`)
@@ -417,6 +418,9 @@ router.post('/stream', async (req, res) => {
 
     // Save user message
     saveChatMessage(analysisId, 'user', message)
+
+    // Get brand prompt addition if enabled
+    const brandPrompt = getBrandPromptAddition(brandSettings)
 
     // Build context message
     const contextMessage = `
@@ -449,12 +453,17 @@ Du kannst jederzeit andere URLs abrufen, wenn der Nutzer danach fragt.
     let toolUseBlocks = []
     let currentToolUse = null
 
+    // Build system prompt with optional brand context
+    const systemPrompt = brandPrompt
+      ? `${CHAT_SYSTEM_PROMPT}\n\n${brandPrompt}`
+      : CHAT_SYSTEM_PROMPT
+
     // Recursive function to handle streaming with tool use
     async function streamResponse(msgs) {
       const stream = await client.messages.stream({
         model: 'claude-opus-4-5-20251101',
         max_tokens: 4096,
-        system: CHAT_SYSTEM_PROMPT,
+        system: systemPrompt,
         tools: tools,
         messages: msgs,
       })

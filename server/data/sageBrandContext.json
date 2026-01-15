@@ -1,0 +1,171 @@
+{
+  "brand": "Sage",
+  "toneOfVoice": {
+    "principles": [
+      {
+        "name": "Human",
+        "description": "Freundlich, warmherzig, nicht herablassend. Wir sprechen mit Menschen, nicht zu ihnen.",
+        "dos": [
+          "Natuerliche, gespraechige Sprache verwenden",
+          "Empathie zeigen fuer Business-Herausforderungen",
+          "Persoenliche Ansprache wo passend"
+        ],
+        "donts": [
+          "Roboterhaft oder zu formal klingen",
+          "Jargon ohne Erklaerung verwenden",
+          "Belehrend oder von oben herab wirken"
+        ]
+      },
+      {
+        "name": "Simplify",
+        "description": "Klar, praegnant, kein Jargon. Komplexes einfach erklaeren.",
+        "dos": [
+          "Kurze Saetze und Absaetze",
+          "Fachbegriffe nur mit Erklaerung",
+          "Bullet Points fuer Uebersichtlichkeit"
+        ],
+        "donts": [
+          "Unnoetig komplizierte Erklaerungen",
+          "Lange verschachtelte Saetze",
+          "Anglizismen ohne Not"
+        ]
+      },
+      {
+        "name": "Trust",
+        "description": "Empathisch, kompetent, vertrauenswuerdig. Wir sind der verlässliche Partner.",
+        "dos": [
+          "Fakten mit Quellen belegen",
+          "Ehrlich ueber Limitationen sein",
+          "Erfolgsgeschichten teilen"
+        ],
+        "donts": [
+          "Uebertriebene Versprechen machen",
+          "Wettbewerber schlecht machen",
+          "Unsicherheit zeigen bei Kernkompetenz"
+        ]
+      },
+      {
+        "name": "Bold",
+        "description": "Inspirierend, aktionsorientiert. Wir ermutigen zum Handeln.",
+        "dos": [
+          "Klare Handlungsaufforderungen",
+          "Vision und Moeglichkeiten aufzeigen",
+          "Selbstbewusst Position beziehen"
+        ],
+        "donts": [
+          "Passiv oder zoeagerlich klingen",
+          "Zu viele Optionen ohne Empfehlung",
+          "Angst schueren"
+        ]
+      }
+    ]
+  },
+  "audiences": {
+    "smallBusiness": {
+      "name": "Kleine Unternehmen",
+      "description": "Selbstaendige und kleine Teams (1-50 Mitarbeiter)",
+      "focus": [
+        "Zeitersparnis",
+        "Einfachheit",
+        "Kosteneffizienz",
+        "Alles-in-einem Loesungen"
+      ],
+      "emergingNeeds": [
+        "Automatisierung von Routineaufgaben",
+        "Mobiler Zugriff",
+        "Einfache Compliance"
+      ],
+      "messagingGuidance": [
+        "Fokus auf praktische Vorteile",
+        "Keine Angst vor Technologie",
+        "Zeit = Geld Argumentation"
+      ]
+    },
+    "midSizedCFO": {
+      "name": "CFOs mittelstaendischer Unternehmen",
+      "description": "Finanzverantwortliche in wachsenden Unternehmen (50-500 MA)",
+      "focus": [
+        "Skalierbarkeit",
+        "Compliance & Audit-Sicherheit",
+        "Echtzeit-Reporting",
+        "Integration bestehender Systeme"
+      ],
+      "emergingNeeds": [
+        "Predictive Analytics",
+        "Cash Flow Forecasting",
+        "ESG Reporting"
+      ],
+      "messagingGuidance": [
+        "ROI und Effizienzgewinne betonen",
+        "Compliance-Sicherheit hervorheben",
+        "Strategische Partnerschaft positionieren"
+      ]
+    },
+    "hrLeaders": {
+      "name": "HR-Verantwortliche",
+      "description": "Personalleiter und HR-Manager",
+      "focus": [
+        "Mitarbeiterzufriedenheit",
+        "Payroll-Genauigkeit",
+        "Compliance (Arbeitsrecht)",
+        "Onboarding-Effizienz"
+      ],
+      "emergingNeeds": [
+        "Employee Experience",
+        "Remote Work Management",
+        "Talent Analytics"
+      ],
+      "messagingGuidance": [
+        "Menschen im Mittelpunkt",
+        "Fehlerreduktion betonen",
+        "Zeit fuer strategische HR-Arbeit"
+      ]
+    },
+    "accountants": {
+      "name": "Buchhalter & Steuerberater",
+      "description": "Externe Berater und Kanzleien",
+      "focus": [
+        "Mandanten-Management",
+        "Automatisierung",
+        "DATEV-Kompatibilitaet",
+        "Aktualitaet (Gesetzesaenderungen)"
+      ],
+      "emergingNeeds": [
+        "KI-gestuetzte Buchfuehrung",
+        "Digitale Belege",
+        "Automatische Kontierung"
+      ],
+      "messagingGuidance": [
+        "Fachkompetenz demonstrieren",
+        "Zeitersparnis pro Mandant",
+        "Zukunftssicherheit der Kanzlei"
+      ]
+    }
+  },
+  "contentGuidelines": {
+    "headlines": {
+      "style": "Kurz, aktiv, benefit-orientiert",
+      "examples": [
+        "Weniger Papierkram, mehr Zeit fuer Ihr Business",
+        "Buchhaltung, die sich um sich selbst kuemmert",
+        "Wachsen Sie mit Ueberblick"
+      ]
+    },
+    "cta": {
+      "style": "Klar, aktionsorientiert, niedrigschwellig",
+      "examples": [
+        "Jetzt kostenlos testen",
+        "Demo vereinbaren",
+        "Mehr erfahren"
+      ]
+    },
+    "supportiveText": {
+      "style": "Erklaerend, vertrauensbildend",
+      "tips": [
+        "Zahlen und Fakten wo moeglich",
+        "Kundenstimmen einbauen",
+        "Komplexes mit Analogien erklaeren"
+      ]
+    }
+  }
+}

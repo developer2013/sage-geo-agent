@@ -1,0 +1,152 @@
+Sage Tone of Voice Examples – Before & After  
+Format: Plain Text | Updated: July 2025  
+Purpose: Show how Sage tone of voice is applied across different touchpoints, channels, and audiences.
+
+---
+
+# 1. About Us Page – General B2B Tone
+
+**Before:**  
+Our solutions manage accounting, HR, payroll, payments, assets, construction, real estate, and enterprise systems.
+
+**After:**  
+From accounting, HR, payroll, and payments to assets, construction, real estate, and enterprise, our solutions help startups, scale-ups, and established companies proactively grow their business.  
+Sage software delivers live data and intelligence wherever it’s needed—cloud-based, on-premise, or both—to help companies manage their finances, empower their people, and unlock business potential.
+
+---
+
+# 2. Welcome Email – Sage City (Internal or Existing Customer)
+
+**Before:**  
+You're in... Welcome Stu T to Sage City!  
+Log in with your email address and password to get started.  
+You’ll meet like-minded community members...
+
+**After:**  
+Hi Stu!  
+Welcome to Sage City—a place to learn from, connect with, and get advice from other users.  
+Login with your email and password. Create your profile with a bio, title, and product—you’ll start networking right away.  
+Click “Groups” in the top nav, choose your country and product, then “Join Group” to post questions, reply to threads, or vote on ideas.  
+We can’t wait to meet you!
+
+---
+
+# 3. Social Media – Teaser for Sound Advice Podcast
+
+**Teaser Before:**  
+When a global pandemic grounded Joe Townshend’s career as a pilot, he saw an opportunity to finally turn his passion for good coffee into business reality.
+
+**Teaser After:**  
+When the pandemic grounded Joe Townshend’s pilot career, he saw an opportunity to turn his obsession with great coffee into a business.  
+We talk career turbulence and turning passion into profit this Monday.
+
+**LinkedIn Before:**  
+You know your product is worth the money, but your customers might not—yet.
+
+**LinkedIn After:**  
+You know your product is worth every penny. But what do your customers think?  
+In our latest #SoundAdvicePodcast, we hear how pilot-turned-entrepreneur Joe Townshend balances pricing and perceived value at Altitude Coffee.
+
+**Twitter Before:**  
+Our latest #SoundAdvicePodcast brings you the fascinating story of Joe Townshend...
+
+**Twitter After:**  
+Hear the incredible story of how pilot Joe Townshend @altcoffeeldn turned his passion for coffee into a thriving business.
+
+**Facebook Before:**  
+Pilot-turned-coffee king Joe Townshend is a stickler for detail...
+
+**Facebook After:**  
+Pilot-turned-coffee king Joe Townshend is obsessed with quality. Learn how he balances quality, cash flow, and customers at Altitude Coffee on our latest #SoundAdvicePodcast.
+
+---
+
+# 4. In-Product Pop-up – Sage X3 (ERP)
+
+**Before:**  
+A better way to manage your entire business, at a lower cost and on a global scale...
+
+**After:**  
+More agile, less costly.  
+There’s a faster, simpler way to manage every part of your business—financials, supply chain, and production—at a fraction of typical ERP costs.  
+Learn how Sage X3 can help you compete and win globally.
+
+---
+
+# 5. In-Product Message – Bank Reconciliation
+
+**Before:**  
+Our new and improved Bank Reconciliation is here.  
+Designed to handle large volumes of transactions...
+
+**After:**  
+Faster month-end closeouts? Yes, please!  
+With easier setup, flexible customization, and a new Action UI, our Bank Reconciliation makes closing out the month fast and frustration-free.
+
+---
+
+# 6. User Guide – Risk Mitigation (Internal Communication)
+
+**Before:**  
+The Risk Mitigation process enables you to keep track of team members’ vaccination and test status...
+
+**After:**  
+The Risk Mitigation process helps you protect employee wellbeing and comply with workplace safety regulations by tracking everything in one place: vaccination dates, test results, exemptions—and supporting documentation.
+
+---
+
+# 7. Internal Announcement – Vendor Payments
+
+**Before:**  
+Announcing general availability for Vendor Payments powered by CSI...
+
+**After:**  
+Faster, easier payments for all!  
+Starting now, all U.S. companies can pay bills quickly and securely right inside Sage Intacct.  
+Just select CSI as your payment provider and let us handle the rest.  
+Supported methods: ACH, check delivery, virtual card.
+
+---
+
+# 8. Internal Launch – Sage for Accountants
+
+**Before:**  
+Great news! Today we’re so proud to be making business simpler with the introduction of Sage for Accountants...
+
+**After:**  
+We’re simplifying life for accountants—starting today.  
+Sage for Accountants automates everyday workflows and empowers advisors with tools that make every client conversation more valuable.  
+This full-suite platform helps you win new clients, manage relationships, and deliver more with confidence.
+
+---
+
+# 9. Internal Improvement – Making Webchat Easier
+
+**Before:**  
+As part of our ambition to reduce customer effort, we’re making it easier...
+
+**After:**  
+Let’s make webchat faster, easier, and more fun.  
+Starting Dec. 6th, you'll see clearer canned responses—and we’re rolling out a new “Chat Playbook” to make conversations more personal and consistent.  
+Thanks for helping us make Sage conversations great!
+
+---
+
+# 10. Internal Highlight – Colleague Feature
+
+**Before:**  
+Retention Advisor Ismaa-eel Isaacs shows genuine care for Sage customers every day...
+
+**After:**  
+What makes Sage great? People like Ismaa-eel Isaacs.  
+He brings care, drive, and integrity to every customer call—and shows what it means to live the Sage values.  
+When a customer’s issue went unresolved for 6 months, he worked with Support and Dev and fixed it in 3 days.  
+That’s Sage spirit in action.
+
+---
+
+# Notes for Use in Copilot
+- Each example above is grounded in one or more Sage tone-of-voice values (Human, Simplify, Trust, Bold).
+- These examples can be used to coach tone corrections based on channel, audience, and purpose.
+- Encourage use in “💡Here are some ideas for improvement” sections, when appropriate.
+

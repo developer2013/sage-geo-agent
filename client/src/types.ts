@@ -9,10 +9,17 @@ export interface Weakness {
   description: string
 }
 
+export interface RecommendationImpact {
+  level: 'HOCH' | 'MITTEL' | 'NIEDRIG'
+  percentage: string  // e.g., '+30-40%' or 'Variabel'
+  source: string      // e.g., 'Princeton GEO-BENCH' or 'Best Practice'
+}
+
 export interface Recommendation {
   timeframe: 'SOFORT' | 'KURZFRISTIG' | 'MITTELFRISTIG'
   action: string
   reason: string
+  impact?: RecommendationImpact  // Optional for backwards compatibility
 }
 
 export interface MetaTag {
@@ -23,9 +30,16 @@ export interface MetaTag {
 
 export interface PageCode {
   html: string
+  markdown?: string | null  // For better Claude chat context
   metaTags: MetaTag[]
   schemaMarkup: object[]
   robotsTxt: string | null
+  metadata?: {
+    title?: string
+    description?: string
+    [key: string]: unknown
+  } | null
+  usedFirecrawl?: boolean
 }
 
 export interface ImageAnalysis {
