@@ -126,8 +126,11 @@ export async function fetchPageContent(url) {
     // Get robots.txt separately
     const robotsTxt = await getRobotsTxt(url)
 
-    // Parse HTML with cheerio for meta tags and schema
-    const $ = cheerio.load(firecrawlResult.html)
+    // Parse rawHtml (full page with <head>) for meta tags and schema
+    // rawHtml contains the complete HTML including <head> section
+    const htmlForParsing = firecrawlResult.rawHtml || firecrawlResult.html
+    console.log(`[Scraper] Using ${firecrawlResult.rawHtml ? 'rawHtml' : 'html'} for meta extraction, length: ${htmlForParsing.length}`)
+    const $ = cheerio.load(htmlForParsing)
 
     const metaTags = []
     $('meta').each((_, el) => {

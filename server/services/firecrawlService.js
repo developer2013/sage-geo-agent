@@ -25,7 +25,7 @@ export async function scrapeWithFirecrawl(url) {
     console.log(`[Firecrawl] Scraping: ${url}`)
 
     const result = await client.scrape(url, {
-      formats: ['markdown', 'html', 'screenshot', 'links'],
+      formats: ['markdown', 'html', 'rawHtml', 'screenshot', 'links'],
       onlyMainContent: false,
       waitFor: 3000,
     })
@@ -76,9 +76,11 @@ export async function scrapeWithFirecrawl(url) {
     }
 
     console.log(`[Firecrawl] Successfully scraped: ${url}`)
+    console.log(`[Firecrawl] rawHtml available: ${!!doc.rawHtml}, length: ${doc.rawHtml?.length || 0}`)
 
     return {
       html: doc.html || '',
+      rawHtml: doc.rawHtml || doc.html || '',  // rawHtml contains full page with <head>
       markdown: doc.markdown || '',
       screenshot: screenshotBase64,
       links: doc.links || [],
