@@ -259,7 +259,16 @@ Erlaubt sein sollten:
 - BreadcrumbList (Navigation)
 - Product + Review (Produkte)`
 
-export async function analyzeWithClaude(url, pageContent, pageCode) {
+export async function analyzeWithClaude(url, pageContent, pageCode, imageSettings = {}) {
+  // Default image settings
+  const settings = {
+    includeScreenshot: imageSettings.includeScreenshot ?? true,
+    includeImages: imageSettings.includeImages ?? true,
+    maxImages: Math.min(5, Math.max(1, imageSettings.maxImages ?? 3))
+  }
+
+  console.log(`[AI] Image settings: screenshot=${settings.includeScreenshot}, images=${settings.includeImages}, maxImages=${settings.maxImages}`)
+
   const textContent = extractTextContent(pageCode.html)
 
   // FIX: Get title and description from metaTags/metadata (extracted from rawHtml) because pageCode.html doesn't include <head>
@@ -472,8 +481,8 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
   // Build message content array
   const messageContent = []
 
-  // Add screenshot if available (from Firecrawl)
-  if (pageCode.screenshot) {
+  // Add screenshot if available and enabled
+  if (settings.includeScreenshot && pageCode.screenshot) {
     console.log('[AI] Screenshot data type:', typeof pageCode.screenshot)
     console.log('[AI] Screenshot first 100 chars:', String(pageCode.screenshot).substring(0, 100))
     console.log('[AI] Screenshot length:', String(pageCode.screenshot).length)
@@ -494,14 +503,16 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
     } else {
       console.log('[AI] Screenshot skipped - invalid base64 or unsupported type:', screenshotMediaType)
     }
+  } else if (!settings.includeScreenshot) {
+    console.log('[AI] Screenshot disabled by user settings')
   }
 
-  // Add individual images if available (with media type validation)
-  if (pageCode.images && pageCode.images.length > 0) {
-    console.log(`[AI] Found ${pageCode.images.length} images, validating...`)
+  // Add individual images if available and enabled (with media type validation)
+  if (settings.includeImages && pageCode.images && pageCode.images.length > 0) {
+    console.log(`[AI] Found ${pageCode.images.length} images, will include max ${settings.maxImages}...`)
     let addedImages = 0
     let skippedImages = 0
-    for (const img of pageCode.images.slice(0, 3)) {
+    for (const img of pageCode.images.slice(0, settings.maxImages)) {
       const cleanedData = cleanBase64(img.base64)
       const normalizedType = normalizeMediaType(img.mediaType)
 
@@ -522,6 +533,8 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
       }
     }
     console.log(`[AI] Added ${addedImages} valid images, skipped ${skippedImages} unsupported`)
+  } else if (!settings.includeImages) {
+    console.log('[AI] Page images disabled by user settings')
   }
 
   // Add text content

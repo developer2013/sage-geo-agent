@@ -1,16 +1,31 @@
 import { useState } from 'react'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, Image, Camera, ChevronDown, ChevronUp } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
+
+export interface ImageSettings {
+  includeScreenshot: boolean
+  includeImages: boolean
+  maxImages: number
+}
 
 interface UrlInputProps {
-  onAnalyze: (url: string) => void
+  onAnalyze: (url: string, imageSettings: ImageSettings) => void
   isLoading: boolean
 }
 
 export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
   const [url, setUrl] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const [imageSettings, setImageSettings] = useState<ImageSettings>({
+    includeScreenshot: true,
+    includeImages: true,
+    maxImages: 3
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,7 +34,7 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
       if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
         formattedUrl = 'https://' + formattedUrl
       }
-      onAnalyze(formattedUrl)
+      onAnalyze(formattedUrl, imageSettings)
     }
   }
 
@@ -51,6 +66,85 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
             )}
           </Button>
         </form>
+
+        {/* Image Settings Toggle */}
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setShowSettings(!showSettings)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Image className="h-4 w-4" />
+            Bild-Einstellungen
+            {showSettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+
+          {showSettings && (
+            <div className="mt-4 p-4 rounded-lg bg-muted/30 space-y-4">
+              {/* Screenshot Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="screenshot-toggle" className="text-sm cursor-pointer">
+                    Screenshot analysieren
+                  </Label>
+                </div>
+                <Switch
+                  id="screenshot-toggle"
+                  checked={imageSettings.includeScreenshot}
+                  onCheckedChange={(checked) =>
+                    setImageSettings({ ...imageSettings, includeScreenshot: checked })
+                  }
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Images Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Image className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="images-toggle" className="text-sm cursor-pointer">
+                    Bilder auf der Seite analysieren
+                  </Label>
+                </div>
+                <Switch
+                  id="images-toggle"
+                  checked={imageSettings.includeImages}
+                  onCheckedChange={(checked) =>
+                    setImageSettings({ ...imageSettings, includeImages: checked })
+                  }
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Max Images Slider */}
+              {imageSettings.includeImages && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Max. Bilder: {imageSettings.maxImages}</Label>
+                    <span className="text-xs text-muted-foreground">(1-5)</span>
+                  </div>
+                  <Slider
+                    value={[imageSettings.maxImages]}
+                    onValueChange={([value]) =>
+                      setImageSettings({ ...imageSettings, maxImages: value })
+                    }
+                    min={1}
+                    max={5}
+                    step={1}
+                    disabled={isLoading}
+                    className="w-full"
+                  />
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Mehr Bilder = detailliertere visuelle Analyse, aber hoehere Kosten und laengere Analysezeit.
+              </p>
+            </div>
+          )}
+        </div>
+
         <p className="text-xs text-muted-foreground mt-4">
           Gib eine URL ein, um die GEO-Tauglichkeit zu analysieren. Die Analyse prueft Schema Markup, Meta-Tags, Struktur und mehr.
         </p>

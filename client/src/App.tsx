@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Header } from '@/components/Header'
-import { UrlInput } from '@/components/UrlInput'
+import { UrlInput, type ImageSettings } from '@/components/UrlInput'
 import { AnalysisResult } from '@/components/AnalysisResult'
 import { HistoryPanel } from '@/components/HistoryPanel'
 import { LoadingAnimation } from '@/components/LoadingAnimation'
@@ -56,7 +56,7 @@ function App() {
     }
   }
 
-  const handleAnalyze = async (url: string) => {
+  const handleAnalyze = async (url: string, imageSettings: ImageSettings) => {
     setIsLoading(true)
     setError(null)
     setResult(null)
@@ -66,7 +66,7 @@ function App() {
       const response = await fetch(`${API_URL}/api/analyze/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, imageSettings }),
       })
 
       if (!response.ok) {

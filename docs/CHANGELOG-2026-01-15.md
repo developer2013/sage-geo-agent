@@ -418,6 +418,36 @@ e5e885a fix: Add forwardRef to Badge component for Radix UI compatibility
 
 ---
 
+## Neue Features (Nachtrag)
+
+### 8. Bild-Einstellungen (Image Settings)
+
+**Ort:** URL-Eingabe → "Bild-Einstellungen" aufklappbar
+
+**Funktionen:**
+- Screenshot-Analyse ein/ausschalten
+- Seiten-Bilder Analyse ein/ausschalten
+- Max. Bilder Slider (1-5)
+- Reduziert API-Kosten und Analysezeit bei Bedarf
+
+**Dateien:**
+- `client/src/components/UrlInput.tsx` (ImageSettings Interface + UI)
+- `client/src/components/ui/slider.tsx` (Neuer Slider)
+- `client/src/App.tsx` (Settings weiterreichen)
+- `server/routes/analyze.js` (Settings extrahieren)
+- `server/services/aiService.js` (Settings verwenden)
+
+**Verwendung:**
+```typescript
+interface ImageSettings {
+  includeScreenshot: boolean  // Screenshot an Claude senden
+  includeImages: boolean      // Seiten-Bilder an Claude senden
+  maxImages: number           // 1-5, Default: 3
+}
+```
+
+---
+
 *Erstellt: 15. Januar 2026*
-*Zuletzt aktualisiert: 15. Januar 2026, 17:15 Uhr*
-*Version: 2.1.0*
+*Zuletzt aktualisiert: 15. Januar 2026, 19:30 Uhr*
+*Version: 2.2.0*

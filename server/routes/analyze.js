@@ -270,7 +270,16 @@ router.post('/stream', async (req, res) => {
   }
 
   try {
-    const { url, forceRefresh } = req.body
+    const { url, forceRefresh, imageSettings } = req.body
+
+    // Default image settings
+    const settings = {
+      includeScreenshot: imageSettings?.includeScreenshot ?? true,
+      includeImages: imageSettings?.includeImages ?? true,
+      maxImages: Math.min(5, Math.max(1, imageSettings?.maxImages ?? 3))
+    }
+
+    console.log(`[Analyze] Image settings:`, settings)
 
     if (!url) {
       res.write(`data: ${JSON.stringify({ type: 'error', error: 'URL ist erforderlich' })}\n\n`)
@@ -306,8 +315,9 @@ router.post('/stream', async (req, res) => {
 
     sendProgress(2, 'Analysiere mit KI...')
     console.log(`[Analyze] Screenshot available: ${!!pageCode.screenshot}`)
+    console.log(`[Analyze] Images available: ${pageCode.images?.length || 0}`)
 
-    const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode)
+    const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
 
     sendProgress(3, 'Erstelle Bericht...')
 
@@ -363,7 +373,14 @@ router.post('/stream', async (req, res) => {
 // Regular endpoint (kept for compatibility)
 router.post('/', async (req, res) => {
   try {
-    const { url, forceRefresh } = req.body
+    const { url, forceRefresh, imageSettings } = req.body
+
+    // Default image settings (same as streaming endpoint)
+    const settings = {
+      includeScreenshot: imageSettings?.includeScreenshot ?? true,
+      includeImages: imageSettings?.includeImages ?? true,
+      maxImages: Math.min(5, Math.max(1, imageSettings?.maxImages ?? 3))
+    }
 
     if (!url) {
       return res.status(400).json({ error: 'URL ist erforderlich' })
@@ -392,7 +409,7 @@ router.post('/', async (req, res) => {
     console.log(`[Analyze] Screenshot available: ${!!pageCode.screenshot}`)
     console.log(`[Analyze] Images available: ${pageCode.images?.length || 0}`)
 
-    const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode)
+    const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
 
     // Calculate content stats and performance metrics
     const contentStats = calculateContentStats(pageCode.html, validUrl.href)
