@@ -193,11 +193,25 @@ export function deleteAnalysis(id) {
 // Chat message functions
 export function saveChatMessage(analysisId, role, content) {
   const db = getDb()
-  const stmt = db.prepare(`
-    INSERT INTO chat_messages (analysis_id, role, content)
-    VALUES (?, ?, ?)
-  `)
-  stmt.run(analysisId, role, content)
+
+  // Check if analysis exists first (to avoid FOREIGN KEY constraint error)
+  const analysisExists = db.prepare('SELECT 1 FROM analyses WHERE id = ?').get(analysisId)
+  if (!analysisExists) {
+    console.log(`[DB] Cannot save chat message - analysis ${analysisId} not found`)
+    return false
+  }
+
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO chat_messages (analysis_id, role, content)
+      VALUES (?, ?, ?)
+    `)
+    stmt.run(analysisId, role, content)
+    return true
+  } catch (error) {
+    console.error(`[DB] Error saving chat message:`, error.message)
+    return false
+  }
 }
 
 export function getChatMessages(analysisId) {

@@ -411,13 +411,16 @@ router.post('/stream', async (req, res) => {
     const { message, analysisId, context, history = [], brandSettings } = req.body
 
     if (!message || !analysisId) {
-      res.write(`data: ${JSON.stringify({ error: 'Nachricht und Analyse-ID sind erforderlich' })}\n\n`)
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Nachricht und Analyse-ID sind erforderlich' })}\n\n`)
       res.end()
       return
     }
 
-    // Save user message
-    saveChatMessage(analysisId, 'user', message)
+    // Save user message (may fail if analysis doesn't exist, but continue anyway)
+    const saved = saveChatMessage(analysisId, 'user', message)
+    if (!saved) {
+      console.log(`[Chat] Could not save user message for analysis ${analysisId} - continuing without persistence`)
+    }
 
     // Get brand prompt addition if enabled
     const brandPrompt = getBrandPromptAddition(brandSettings)
