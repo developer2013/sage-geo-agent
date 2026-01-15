@@ -12,7 +12,7 @@ const buttonVariants = cva(
         destructive:
           "neu-button bg-destructive text-destructive-foreground hover:bg-destructive/90 active:shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)]",
         outline:
-          "neu-button bg-background text-foreground hover:text-accent-foreground active:shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)]",
+          "neu-button bg-background text-foreground hover:bg-muted hover:text-accent-foreground active:shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)]",
         secondary:
           "neu-button bg-secondary text-secondary-foreground hover:bg-secondary/80 active:shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)]",
         ghost: "hover:bg-accent hover:text-accent-foreground",
