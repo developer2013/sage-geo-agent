@@ -86,18 +86,32 @@ function calculateContentStats(html, baseUrl) {
     $('a[href]').each((_, link) => {
       const href = $(link).attr('href')
       if (!href || href === '#' || href.startsWith('javascript:')) return
+      // Skip mailto:, tel:, sms:, and other non-http protocols
+      if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('sms:')) return
+      // Skip anchor-only links
+      if (href.startsWith('#')) return
       if (isExcludedUrl(href)) return
 
       try {
         let normalizedHref = href
         let isInternal = false
 
-        // Handle relative URLs
-        if (href.startsWith('/') || !href.includes('://')) {
+        // Handle relative URLs (starting with / or no protocol)
+        if (href.startsWith('/')) {
           isInternal = true
           normalizedHref = href.split('?')[0].split('#')[0] // Remove query/hash
+        } else if (!href.includes('://')) {
+          // Relative path without leading slash (e.g., "page.html")
+          // But exclude non-http schemes that slipped through
+          if (href.includes(':')) {
+            return // Skip unknown protocols like "custom:"
+          }
+          isInternal = true
+          normalizedHref = href.split('?')[0].split('#')[0]
         } else {
           const linkUrl = new URL(href)
+          // Only count http/https links
+          if (!['http:', 'https:'].includes(linkUrl.protocol)) return
           const linkHost = linkUrl.hostname
           isInternal = linkHost === baseHost || linkHost.endsWith('.' + baseHost)
           normalizedHref = linkUrl.origin + linkUrl.pathname
@@ -109,16 +123,17 @@ function calculateContentStats(html, baseUrl) {
           uniqueExternalLinks.add(normalizedHref)
         }
       } catch {
-        // Invalid URL, count as internal
-        uniqueInternalLinks.add(href)
+        // Invalid URL, skip it
       }
     })
   } catch {
-    // If baseUrl parsing fails, just count all links as internal
+    // If baseUrl parsing fails, just count valid http links
     $('a[href]').each((_, link) => {
       const href = $(link).attr('href')
-      if (href && href !== '#') {
-        uniqueInternalLinks.add(href)
+      if (!href || href === '#') return
+      if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('javascript:')) return
+      if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('/')) {
+        uniqueInternalLinks.add(href.split('?')[0].split('#')[0])
       }
     })
   }
