@@ -9,9 +9,3 @@ cmds = ["cd client && npm run build"]
 
 [start]
 cmd = "cd server && npm start"
-
-# Secrets should only be available at runtime, not during build
-# This prevents them from being baked into the Docker image
-[variables]
-ANTHROPIC_API_KEY = { secret = true }
-FIRECRAWL_API_KEY = { secret = true }
