@@ -6,6 +6,15 @@ import {
   fetchImagesAsBase64,
   isFirecrawlAvailable
 } from './firecrawlService.js'
+import {
+  logRequest,
+  logSuccess,
+  logWarning,
+  logError,
+  startTimer,
+  getElapsed,
+  formatSize
+} from '../utils/debugLogger.js'
 
 // Helper function to create browser-like headers
 function getBrowserHeaders(url, withReferer = false) {
@@ -38,7 +47,8 @@ function getBrowserHeaders(url, withReferer = false) {
  * Fallback scraper using native fetch
  */
 async function fetchPageContentFallback(url) {
-  console.log('[Scraper] Using fallback scraper...')
+  const timer = startTimer()
+  logRequest('Scraper', 'FETCH (Fallback)', url)
 
   let response = await fetch(url, {
     headers: getBrowserHeaders(url, false),
@@ -46,7 +56,7 @@ async function fetchPageContentFallback(url) {
   })
 
   if (response.status === 403) {
-    console.log('Got 403, retrying with Referer header...')
+    logWarning('Scraper', '403 Forbidden - Retry mit Referer')
     response = await fetch(url, {
       headers: getBrowserHeaders(url, true),
       redirect: 'follow',
@@ -55,8 +65,10 @@ async function fetchPageContentFallback(url) {
 
   if (!response.ok) {
     if (response.status === 403) {
+      logError('Scraper', '403 Forbidden - Bot-Schutz aktiv')
       throw new Error(`Die Website blockiert automatisierte Anfragen (403 Forbidden). Diese Seite hat einen Bot-Schutz aktiviert (z.B. Cloudflare, Akamai). Bitte versuche eine andere URL ohne starken Bot-Schutz.`)
     }
+    logError('Scraper', `HTTP ${response.status}`)
     throw new Error(`HTTP error! status: ${response.status}`)
   }
 
@@ -105,6 +117,13 @@ async function fetchPageContentFallback(url) {
     // robots.txt not available
   }
 
+  logSuccess('Scraper', getElapsed(timer), {
+    'HTML': formatSize(html.length),
+    'Meta-Tags': metaTags.length,
+    'Schema': schemaMarkup.length,
+    'robots.txt': robotsTxt ? '✓' : '✗'
+  })
+
   return {
     html,
     metaTags,
@@ -122,7 +141,6 @@ async function fetchPageContentFallback(url) {
 export async function fetchPageContent(url) {
   // Use Firecrawl if configured (no fallback - Firecrawl handles bot protection)
   if (isFirecrawlAvailable()) {
-    console.log('[Scraper] Using Firecrawl...')
 
     // Scrape page with Firecrawl
     const firecrawlResult = await scrapeWithFirecrawl(url)
@@ -133,7 +151,6 @@ export async function fetchPageContent(url) {
     // Parse rawHtml (full page with <head>) for meta tags and schema
     // rawHtml contains the complete HTML including <head> section
     const htmlForParsing = firecrawlResult.rawHtml || firecrawlResult.html
-    console.log(`[Scraper] Using ${firecrawlResult.rawHtml ? 'rawHtml' : 'html'} for meta extraction, length: ${htmlForParsing.length}`)
     const $ = cheerio.load(htmlForParsing)
 
     const metaTags = []
@@ -147,14 +164,6 @@ export async function fetchPageContent(url) {
       }
     })
 
-    // DEBUG: Check for description meta tag
-    const descriptionTag = metaTags.find(t => t.name?.toLowerCase() === 'description')
-    const ogDescTag = metaTags.find(t => t.property?.toLowerCase() === 'og:description')
-    console.log(`[Scraper] META DEBUG:`)
-    console.log(`  - Total meta tags: ${metaTags.length}`)
-    console.log(`  - Description tag: ${descriptionTag ? descriptionTag.content?.substring(0, 50) + '...' : 'NOT FOUND'}`)
-    console.log(`  - OG Description: ${ogDescTag ? ogDescTag.content?.substring(0, 50) + '...' : 'NOT FOUND'}`)
-    console.log(`  - First 5 tags: ${metaTags.slice(0, 5).map(t => t.name || t.property).join(', ')}`)
 
     const schemaMarkup = []
     $('script[type="application/ld+json"]').each((_, el) => {
@@ -171,22 +180,7 @@ export async function fetchPageContent(url) {
 
     // Extract and fetch images for analysis
     const imageUrls = extractImageUrls(firecrawlResult.html, url)
-    console.log(`[Scraper] Found ${imageUrls.length} images on page`)
-
     const images = await fetchImagesAsBase64(imageUrls, 5)
-    console.log(`[Scraper] Fetched ${images.length} images for analysis`)
-
-    // Log screenshot status
-    if (firecrawlResult.screenshot) {
-      console.log(`[Scraper] Screenshot available, length: ${firecrawlResult.screenshot.length}`)
-    } else {
-      console.log(`[Scraper] No screenshot from Firecrawl`)
-    }
-
-    // Log heading visibility data (browser-based detection)
-    if (firecrawlResult.headingVisibility) {
-      console.log(`[Scraper] Heading visibility from browser: ${firecrawlResult.headingVisibility.length} headings detected`)
-    }
 
     return {
       html: firecrawlResult.html,
@@ -200,12 +194,13 @@ export async function fetchPageContent(url) {
       images,
       metadata: firecrawlResult.metadata,
       headingVisibility: firecrawlResult.headingVisibility,  // Browser-detected visibility
-      usedFirecrawl: true
+      usedFirecrawl: true,
+      _debug: firecrawlResult._debug  // Pass through debug info for summary
     }
   }
 
   // Fallback to native fetch (only when Firecrawl is not configured)
-  console.log('[Scraper] Firecrawl not configured, using fallback scraper')
+  logWarning('Scraper', 'Firecrawl nicht konfiguriert - Fallback aktiv')
   const fallbackResult = await fetchPageContentFallback(url)
   return {
     ...fallbackResult,
@@ -231,16 +226,11 @@ export function extractTextContent(html, headingVisibility = null) {
   // Use browser-based visibility data if available (100% accurate)
   // This is the SINGLE SOURCE OF TRUTH for heading analysis when Firecrawl provides it
   if (headingVisibility && Array.isArray(headingVisibility) && headingVisibility.length > 0) {
-    console.log(`[Scraper] Using browser-based visibility for ${headingVisibility.length} headings`)
 
     // Build headings array directly from visibility data (only visible headings)
     const visibleHeadings = headingVisibility.filter(h => h.visible)
     const hiddenHeadings = headingVisibility.filter(h => !h.visible)
 
-    // Log hidden headings for debugging
-    hiddenHeadings.forEach(hidden => {
-      console.log(`[Scraper] Hidden ${hidden.tag}: "${hidden.text.substring(0, 40)}..." (reason: ${hidden.reason})`)
-    })
 
     // Build heading counts and analysis directly from visibility data
     const headings = []
@@ -267,8 +257,6 @@ export function extractTextContent(html, headingVisibility = null) {
     // Get first visible H1 for the h1 field
     const firstVisibleH1 = visibleHeadings.find(h => h.tag.toUpperCase() === 'H1')
     const h1 = firstVisibleH1?.text || ''
-
-    console.log(`[Scraper] Visible headings: ${visibleHeadings.length} (H1: ${headingCounts.h1}, H2: ${headingCounts.h2})`)
 
     // Analyze heading hierarchy
     const headingAnalysis = {
@@ -440,7 +428,6 @@ export function extractTextContent(html, headingVisibility = null) {
 
   // FALLBACK: Static HTML analysis when headingVisibility is not available
   // This covers ~60% of cases (CSS classes, inline styles, common patterns)
-  console.log(`[Scraper] Using fallback static HTML analysis for hidden elements`)
 
   // Remove hidden/invisible elements before heading analysis
   // This prevents counting H1s that are:

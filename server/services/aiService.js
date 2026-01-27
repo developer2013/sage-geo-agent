@@ -1,5 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { extractTextContent } from './scraperService.js'
+import {
+  logRequest,
+  logSuccessDetailed,
+  logWarning,
+  logError,
+  startTimer,
+  getElapsed,
+  formatSize
+} from '../utils/debugLogger.js'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -277,14 +286,14 @@ Erlaubt sein sollten:
 - Product + Review (Produkte)`
 
 export async function analyzeWithClaude(url, pageContent, pageCode, imageSettings = {}) {
+  const timer = startTimer()
+
   // Default image settings
   const settings = {
     includeScreenshot: imageSettings.includeScreenshot ?? true,
     includeImages: imageSettings.includeImages ?? true,
     maxImages: Math.min(5, Math.max(1, imageSettings.maxImages ?? 3))
   }
-
-  console.log(`[AI] Image settings: screenshot=${settings.includeScreenshot}, images=${settings.includeImages}, maxImages=${settings.maxImages}`)
 
   // Pass browser-detected heading visibility for accurate H1 counting
   const textContent = extractTextContent(pageCode.html, pageCode.headingVisibility)
@@ -296,16 +305,6 @@ export async function analyzeWithClaude(url, pageContent, pageCode, imageSetting
 
   // Also get title from Firecrawl metadata if available
   const actualTitle = pageCode.metadata?.title || textContent.title || ''
-
-  // DEBUG: Log what we found
-  console.log(`[AI] META DEBUG:`)
-  console.log(`  - Title from metadata: ${pageCode.metadata?.title ? pageCode.metadata.title.substring(0, 50) + '...' : 'NOT FOUND'}`)
-  console.log(`  - Title from textContent: ${textContent.title ? textContent.title.substring(0, 50) + '...' : 'NOT FOUND'}`)
-  console.log(`  - Description from metaTags: ${descriptionFromMeta ? descriptionFromMeta.substring(0, 50) + '...' : 'NOT FOUND'}`)
-  console.log(`  - Description from og:description: ${ogDescFromMeta ? ogDescFromMeta.substring(0, 50) + '...' : 'NOT FOUND'}`)
-  console.log(`  - Description from textContent: ${textContent.description ? textContent.description.substring(0, 50) + '...' : 'EMPTY'}`)
-  console.log(`  - Using title: ${actualTitle ? actualTitle.substring(0, 50) + '...' : 'NONE'}`)
-  console.log(`  - Using description: ${actualDescription ? actualDescription.substring(0, 50) + '...' : 'NONE'}`)
 
   // Format headings with question indicator
   const formattedHeadings = textContent.headings.map(h =>
@@ -505,16 +504,12 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
   const messageContent = []
 
   // Add screenshot if available and enabled
+  let screenshotIncluded = false
   if (settings.includeScreenshot && pageCode.screenshot) {
-    console.log('[AI] Screenshot data type:', typeof pageCode.screenshot)
-    console.log('[AI] Screenshot first 100 chars:', String(pageCode.screenshot).substring(0, 100))
-    console.log('[AI] Screenshot length:', String(pageCode.screenshot).length)
-
     const cleanedScreenshot = cleanBase64(pageCode.screenshot)
     const screenshotMediaType = normalizeMediaType(getMediaType(pageCode.screenshot))
 
     if (cleanedScreenshot && isValidMediaType(screenshotMediaType)) {
-      console.log('[AI] Adding cleaned screenshot, type:', screenshotMediaType, 'length:', cleanedScreenshot.length)
       messageContent.push({
         type: 'image',
         source: {
@@ -523,24 +518,20 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
           data: cleanedScreenshot,
         },
       })
+      screenshotIncluded = true
     } else {
-      console.log('[AI] Screenshot skipped - invalid base64 or unsupported type:', screenshotMediaType)
+      logWarning('Claude', `Screenshot übersprungen - ungültiges Format: ${screenshotMediaType}`)
     }
-  } else if (!settings.includeScreenshot) {
-    console.log('[AI] Screenshot disabled by user settings')
   }
 
   // Add individual images if available and enabled (with media type validation)
+  let pageImagesIncluded = 0
   if (settings.includeImages && pageCode.images && pageCode.images.length > 0) {
-    console.log(`[AI] Found ${pageCode.images.length} images, will include max ${settings.maxImages}...`)
-    let addedImages = 0
-    let skippedImages = 0
     for (const img of pageCode.images.slice(0, settings.maxImages)) {
       const cleanedData = cleanBase64(img.base64)
       const normalizedType = normalizeMediaType(img.mediaType)
 
       if (cleanedData && isValidMediaType(normalizedType)) {
-        console.log(`[AI] Adding image with type: ${normalizedType}`)
         messageContent.push({
           type: 'image',
           source: {
@@ -549,15 +540,9 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
             data: cleanedData,
           },
         })
-        addedImages++
-      } else {
-        console.log(`[AI] Skipping image with invalid/unsupported type: ${img.mediaType}`)
-        skippedImages++
+        pageImagesIncluded++
       }
     }
-    console.log(`[AI] Added ${addedImages} valid images, skipped ${skippedImages} unsupported`)
-  } else if (!settings.includeImages) {
-    console.log('[AI] Page images disabled by user settings')
   }
 
   // Add text content
@@ -568,9 +553,20 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
 
   // Add image analysis instructions if we have visual content
   const hasVisualContent = messageContent.some(c => c.type === 'image')
+  const totalImages = (screenshotIncluded ? 1 : 0) + pageImagesIncluded
+
+  // Calculate content sizes for logging
+  const htmlLength = pageCode.html?.length || 0
+
+  // Log the request details
+  logRequest('Claude', 'ANALYZE', url, {
+    'Model': 'claude-opus-4-5-20251101',
+    'System': `${SYSTEM_PROMPT.length.toLocaleString()} chars`,
+    'Images': `${totalImages} (${screenshotIncluded ? '1 screenshot' : 'kein screenshot'}${pageImagesIncluded > 0 ? ` + ${pageImagesIncluded} page` : ''})`,
+    'HTML': formatSize(htmlLength)
+  })
 
   if (hasVisualContent) {
-    console.log('[AI] Visual content attached - adding image analysis instructions')
     messageContent.push({
       type: 'text',
       text: `
@@ -594,44 +590,96 @@ FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
 - accessibilityIssues: ["Gefundene Probleme"]
 - recommendations: ["Visuelle Verbesserungsvorschläge"]`
     })
-  } else {
-    console.log('[AI] No visual content attached - analysis based on HTML only')
   }
 
-  const message = await client.messages.create({
-    model: 'claude-opus-4-5-20251101',
-    max_tokens: 8192,
-    messages: [
-      {
-        role: 'user',
-        content: messageContent,
-      }
-    ],
-    system: SYSTEM_PROMPT,
-  })
+  let message
+  try {
+    message = await client.messages.create({
+      model: 'claude-opus-4-5-20251101',
+      max_tokens: 8192,
+      messages: [
+        {
+          role: 'user',
+          content: messageContent,
+        }
+      ],
+      system: SYSTEM_PROMPT,
+    })
+  } catch (apiError) {
+    const duration = getElapsed(timer)
+    logError('Claude', apiError, {
+      'Dauer': `${(duration / 1000).toFixed(1)}s`,
+      'Model': 'claude-opus-4-5-20251101'
+    })
+    throw apiError
+  }
+
+  const duration = getElapsed(timer)
 
   // Extract JSON from response
   const responseText = message.content[0].text
+  const inputTokens = message.usage?.input_tokens || 0
+  const outputTokens = message.usage?.output_tokens || 0
+
+  // Try to parse the response
+  let parseSuccess = false
+  let result = null
 
   try {
     // Try to parse directly
-    return JSON.parse(responseText)
+    result = JSON.parse(responseText)
+    parseSuccess = true
   } catch (e) {
     // Try to extract JSON from markdown code blocks
     const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[1].trim())
+      try {
+        result = JSON.parse(jsonMatch[1].trim())
+        parseSuccess = true
+      } catch (e2) {
+        // Continue to next method
+      }
     }
 
     // Try to find JSON object in text
-    const jsonStart = responseText.indexOf('{')
-    const jsonEnd = responseText.lastIndexOf('}')
-    if (jsonStart !== -1 && jsonEnd !== -1) {
-      return JSON.parse(responseText.substring(jsonStart, jsonEnd + 1))
+    if (!parseSuccess) {
+      const jsonStart = responseText.indexOf('{')
+      const jsonEnd = responseText.lastIndexOf('}')
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        try {
+          result = JSON.parse(responseText.substring(jsonStart, jsonEnd + 1))
+          parseSuccess = true
+        } catch (e3) {
+          // Parse failed
+        }
+      }
     }
+  }
 
+  // Log response details
+  logSuccessDetailed('Claude', duration, {
+    'Tokens': `${inputTokens.toLocaleString()} in → ${outputTokens.toLocaleString()} out`,
+    'Response': `${responseText.length.toLocaleString()} chars`,
+    'Parse': parseSuccess ? '✓ JSON valid' : '✗ Parse fehlgeschlagen',
+    'Score': result?.geoScore !== undefined ? `${result.geoScore}/100` : 'n/a'
+  })
+
+  if (!parseSuccess) {
+    logError('Claude', 'JSON-Parse fehlgeschlagen', {
+      'Response (Auszug)': responseText.substring(0, 300)
+    })
     throw new Error('Could not parse AI response as JSON')
   }
+
+  // Return with debug info attached
+  result._debug = {
+    duration,
+    inputTokens,
+    outputTokens,
+    parseSuccess
+  }
+
+  return result
 }
 
 /**

@@ -10,6 +10,14 @@ import {
   createGeoReferenceAlert,
   getMonitoredUrls
 } from './dbService.js'
+import {
+  logRequest,
+  logSuccess,
+  logWarning,
+  logError,
+  startTimer,
+  getElapsed
+} from '../utils/debugLogger.js'
 
 // Scheduler state
 let isRunning = false
@@ -31,6 +39,8 @@ function hashContent(content) {
  * @returns {Object} { success, content, hash, error }
  */
 async function fetchAndHash(url) {
+  const timer = startTimer()
+
   try {
     const response = await fetch(url, {
       headers: {
@@ -42,14 +52,21 @@ async function fetchAndHash(url) {
     })
 
     if (!response.ok) {
+      logWarning('Scheduler', `HTTP ${response.status} für ${url}`)
       return { success: false, error: `HTTP ${response.status}` }
     }
 
     const content = await response.text()
     const hash = hashContent(content)
 
+    logSuccess('Scheduler', getElapsed(timer), {
+      'URL': url.substring(0, 40) + '...',
+      'Größe': `${(content.length / 1024).toFixed(1)}KB`
+    })
+
     return { success: true, content, hash }
   } catch (error) {
+    logError('Scheduler', error, { 'URL': url })
     return { success: false, error: error.message }
   }
 }
@@ -60,12 +77,11 @@ async function fetchAndHash(url) {
  * @returns {Object} Check result
  */
 async function checkGeoReference(reference) {
-  console.log(`[Scheduler] Checking GEO reference: ${reference.name} (${reference.url})`)
+  logRequest('Scheduler', 'CHECK', reference.name)
 
   const result = await fetchAndHash(reference.url)
 
   if (!result.success) {
-    console.log(`[Scheduler] Error fetching ${reference.url}: ${result.error}`)
     createGeoReferenceAlert(
       reference.id,
       'error',
@@ -85,7 +101,6 @@ async function checkGeoReference(reference) {
   updateGeoReferenceCheck(reference.id, result.hash)
 
   if (hasChanged) {
-    console.log(`[Scheduler] Content changed for: ${reference.name}`)
     createGeoReferenceAlert(
       reference.id,
       'content_changed',
@@ -98,11 +113,9 @@ async function checkGeoReference(reference) {
   }
 
   if (isFirstCheck) {
-    console.log(`[Scheduler] First check completed for: ${reference.name}`)
     return { checked: true, firstCheck: true }
   }
 
-  console.log(`[Scheduler] No changes for: ${reference.name}`)
   return { checked: true, changed: false }
 }
 
@@ -114,11 +127,10 @@ export async function runGeoReferenceChecks() {
   const references = getGeoReferencesToCheck()
 
   if (references.length === 0) {
-    console.log('[Scheduler] No GEO references due for checking')
     return { checked: 0, changed: 0, errors: 0 }
   }
 
-  console.log(`[Scheduler] Checking ${references.length} GEO references...`)
+  logRequest('Scheduler', 'CHECK_CYCLE', `${references.length} Referenzen`)
 
   const results = {
     checked: 0,
@@ -139,7 +151,11 @@ export async function runGeoReferenceChecks() {
     await new Promise(resolve => setTimeout(resolve, 1000))
   }
 
-  console.log(`[Scheduler] Check cycle complete: ${results.checked} checked, ${results.changed} changed, ${results.errors} errors`)
+  logSuccess('Scheduler', 0, {
+    'geprüft': results.checked,
+    'geändert': results.changed,
+    'Fehler': results.errors
+  })
   return results
 }
 
@@ -149,11 +165,11 @@ export async function runGeoReferenceChecks() {
  */
 export function startScheduler(intervalMs = DEFAULT_CHECK_INTERVAL_MS) {
   if (isRunning) {
-    console.log('[Scheduler] Already running')
+    logWarning('Scheduler', 'Bereits aktiv')
     return
   }
 
-  console.log(`[Scheduler] Starting with interval ${intervalMs / 1000 / 60} minutes`)
+  logRequest('Scheduler', 'START', `Intervall: ${intervalMs / 1000 / 60} Min.`)
   isRunning = true
 
   // Run initial check after a short delay
@@ -176,11 +192,10 @@ export function startScheduler(intervalMs = DEFAULT_CHECK_INTERVAL_MS) {
  */
 export function stopScheduler() {
   if (!isRunning) {
-    console.log('[Scheduler] Not running')
     return
   }
 
-  console.log('[Scheduler] Stopping')
+  logRequest('Scheduler', 'STOP', '')
   isRunning = false
 
   if (checkInterval) {
@@ -205,7 +220,7 @@ export function getSchedulerStatus() {
  * @returns {Object} Summary of check results
  */
 export async function triggerManualCheck() {
-  console.log('[Scheduler] Manual check triggered')
+  logRequest('Scheduler', 'MANUAL_CHECK', 'Manuell ausgelöst')
   return runGeoReferenceChecks()
 }
 

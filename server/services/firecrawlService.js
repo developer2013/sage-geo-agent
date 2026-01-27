@@ -1,4 +1,14 @@
 import FirecrawlApp from '@mendable/firecrawl-js'
+import {
+  logRequest,
+  logSuccess,
+  logSuccessDetailed,
+  logWarning,
+  logError,
+  startTimer,
+  getElapsed,
+  formatSize
+} from '../utils/debugLogger.js'
 
 // Lazy initialization of Firecrawl client
 let firecrawl = null
@@ -57,16 +67,30 @@ const VISIBILITY_DETECTION_SCRIPT = `
 /**
  * Scrape a URL using Firecrawl with screenshot and full content
  * Includes browser-based visibility detection via executeJavascript
+ *
+ * @returns {Object} Result with status information:
+ *   - success: boolean
+ *   - html, rawHtml, markdown: content strings
+ *   - screenshot: base64 string or null
+ *   - headingVisibility: array or null (from executeJavascript)
+ *   - _debug: timing and diagnostic info
  */
 export async function scrapeWithFirecrawl(url) {
   const client = getFirecrawlClient()
   if (!client) {
+    logError('Firecrawl', 'Client nicht initialisiert - API Key fehlt?')
     throw new Error('Firecrawl client not initialized')
   }
 
-  try {
-    console.log(`[Firecrawl] Scraping: ${url}`)
+  const timer = startTimer()
 
+  // Log request details
+  logRequest('Firecrawl', 'SCRAPE', url, {
+    'Formats': 'html, markdown, screenshot, rawHtml, links',
+    'Actions': 'executeJavascript (visibility detection)'
+  })
+
+  try {
     const result = await client.scrape(url, {
       formats: ['markdown', 'html', 'rawHtml', 'screenshot', 'links'],
       onlyMainContent: false,
@@ -79,27 +103,23 @@ export async function scrapeWithFirecrawl(url) {
       ]
     })
 
-    console.log(`[Firecrawl] Result keys:`, Object.keys(result || {}))
-    console.log(`[Firecrawl] Result.data keys:`, Object.keys(result?.data || {}))
-
     // Handle different response formats from Firecrawl SDK
     const doc = result?.data || result
-    console.log(`[Firecrawl] Doc keys:`, Object.keys(doc || {}))
 
     if (!doc || (!doc.html && !doc.markdown)) {
-      console.error(`[Firecrawl] Empty or invalid response:`, JSON.stringify(result).substring(0, 500))
+      logError('Firecrawl', 'Leere oder ungültige Antwort', {
+        'Response (Auszug)': JSON.stringify(result).substring(0, 200)
+      })
       throw new Error(result?.error || 'Firecrawl returned empty response')
     }
 
     // Handle screenshot - Firecrawl returns a URL, we need to download it as base64
     let screenshotBase64 = null
+    let screenshotDownloaded = false
     if (doc.screenshot) {
-      console.log(`[Firecrawl] Screenshot URL received: ${doc.screenshot.substring(0, 80)}...`)
-
       // If it's a URL, download and convert to base64
       if (doc.screenshot.startsWith('http')) {
         try {
-          console.log(`[Firecrawl] Downloading screenshot from URL...`)
           const screenshotResponse = await fetch(doc.screenshot, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -110,40 +130,24 @@ export async function scrapeWithFirecrawl(url) {
           if (screenshotResponse.ok) {
             const arrayBuffer = await screenshotResponse.arrayBuffer()
             screenshotBase64 = Buffer.from(arrayBuffer).toString('base64')
-            console.log(`[Firecrawl] Screenshot downloaded, base64 length: ${screenshotBase64.length}`)
+            screenshotDownloaded = true
           } else {
-            console.log(`[Firecrawl] Failed to download screenshot: ${screenshotResponse.status}`)
+            logWarning('Firecrawl', `Screenshot-Download fehlgeschlagen: HTTP ${screenshotResponse.status}`)
           }
         } catch (err) {
-          console.log(`[Firecrawl] Error downloading screenshot: ${err.message}`)
+          logWarning('Firecrawl', `Screenshot-Download Fehler: ${err.message}`)
         }
       } else {
         // Already base64
         screenshotBase64 = doc.screenshot
-        console.log(`[Firecrawl] Screenshot already base64, length: ${screenshotBase64.length}`)
+        screenshotDownloaded = true
       }
-    } else {
-      console.log(`[Firecrawl] No screenshot in response`)
     }
-
-    console.log(`[Firecrawl] Successfully scraped: ${url}`)
-    console.log(`[Firecrawl] rawHtml available: ${!!doc.rawHtml}, length: ${doc.rawHtml?.length || 0}`)
 
     // Extract heading visibility data from actions result
     // Firecrawl may return actions data in different formats depending on SDK version
     let headingVisibility = null
-
-    // Debug: Log all potential action-related fields
-    if (doc.actions) {
-      console.log(`[Firecrawl] doc.actions type:`, typeof doc.actions, Array.isArray(doc.actions) ? `(array, length: ${doc.actions.length})` : '')
-      console.log(`[Firecrawl] doc.actions content:`, JSON.stringify(doc.actions).substring(0, 500))
-    }
-    if (doc.actionResults) {
-      console.log(`[Firecrawl] doc.actionResults found:`, JSON.stringify(doc.actionResults).substring(0, 500))
-    }
-    if (doc.executeJavascript) {
-      console.log(`[Firecrawl] doc.executeJavascript found:`, JSON.stringify(doc.executeJavascript).substring(0, 500))
-    }
+    let actionsSupported = false
 
     // Try multiple possible locations for action results
     const actionsData = doc.actions || doc.actionResults || doc.executeJavascript
@@ -155,22 +159,26 @@ export async function scrapeWithFirecrawl(url) {
 
       if (resultData && Array.isArray(resultData)) {
         headingVisibility = resultData
-        console.log(`[Firecrawl] Heading visibility data:`, {
-          total: headingVisibility.length,
-          visible: headingVisibility.filter(h => h.visible).length,
-          hidden: headingVisibility.filter(h => !h.visible).length,
-          hiddenReasons: headingVisibility.filter(h => !h.visible).map(h => `${h.tag}: ${h.reason}`)
-        })
-      } else {
-        console.log(`[Firecrawl] Actions result structure unexpected:`, typeof resultData, JSON.stringify(resultData).substring(0, 200))
+        actionsSupported = true
       }
-    } else if (actionsData) {
-      // actionsData exists but is not an array - log its structure
-      console.log(`[Firecrawl] actionsData is not an array:`, typeof actionsData, JSON.stringify(actionsData).substring(0, 500))
-    } else {
-      console.log(`[Firecrawl] No actions result - executeJavascript may not be supported on this Firecrawl plan`)
-      console.log(`[Firecrawl] Available doc fields for debugging:`, Object.keys(doc).filter(k => !['html', 'rawHtml', 'markdown', 'screenshot', 'links'].includes(k)))
     }
+
+    if (!actionsSupported) {
+      logWarning('Firecrawl', 'executeJavascript nicht unterstützt - Firecrawl Plan-Einschränkung?')
+    }
+
+    // Calculate sizes for logging
+    const htmlSize = doc.html?.length || 0
+    const markdownSize = doc.markdown?.length || 0
+    const duration = getElapsed(timer)
+
+    // Log detailed success
+    logSuccessDetailed('Firecrawl', duration, {
+      'HTML': formatSize(htmlSize),
+      'Markdown': formatSize(markdownSize),
+      'Screenshot': screenshotDownloaded ? '✓ (heruntergeladen)' : '✗',
+      'Actions': actionsSupported ? `✓ (${headingVisibility?.length || 0} headings)` : '✗ (nicht unterstützt)'
+    })
 
     return {
       html: doc.html || '',
@@ -180,11 +188,21 @@ export async function scrapeWithFirecrawl(url) {
       links: doc.links || [],
       metadata: doc.metadata || {},
       headingVisibility,  // Browser-detected heading visibility
-      success: true
+      success: true,
+      _debug: {
+        duration,
+        htmlSize,
+        markdownSize,
+        screenshotDownloaded,
+        actionsSupported
+      }
     }
   } catch (error) {
-    console.error(`[Firecrawl] Error scraping ${url}:`, error.message)
-    console.error(`[Firecrawl] Full error:`, error)
+    const duration = getElapsed(timer)
+    logError('Firecrawl', error, {
+      'URL': url,
+      'Dauer': `${(duration / 1000).toFixed(1)}s`
+    })
     throw new Error(`Firecrawl error: ${error.message}`)
   }
 }
@@ -287,6 +305,12 @@ function resolveUrl(relativeUrl, baseUrl) {
 export async function fetchImagesAsBase64(images, maxImages = 5) {
   const fetchedImages = []
   const imagesToFetch = images.slice(0, maxImages)
+  const timer = startTimer()
+
+  logRequest('Firecrawl', 'FETCH_IMAGES', `${imagesToFetch.length} Bilder`)
+
+  let successCount = 0
+  let skipCount = 0
 
   for (const img of imagesToFetch) {
     try {
@@ -297,28 +321,40 @@ export async function fetchImagesAsBase64(images, maxImages = 5) {
         }
       })
 
-      if (!response.ok) continue
+      if (!response.ok) {
+        skipCount++
+        continue
+      }
 
       const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.startsWith('image/')) continue
+      if (!contentType || !contentType.startsWith('image/')) {
+        skipCount++
+        continue
+      }
 
       const arrayBuffer = await response.arrayBuffer()
       const base64 = Buffer.from(arrayBuffer).toString('base64')
 
-      if (base64.length < 1000) continue
-      if (base64.length > 5 * 1024 * 1024) continue
+      if (base64.length < 1000 || base64.length > 5 * 1024 * 1024) {
+        skipCount++
+        continue
+      }
 
       fetchedImages.push({
         ...img,
         base64,
         mediaType: contentType.split(';')[0]
       })
-
-      console.log(`[Firecrawl] Fetched image: ${img.absoluteUrl.substring(0, 50)}...`)
+      successCount++
     } catch (error) {
-      console.log(`[Firecrawl] Could not fetch image: ${img.absoluteUrl}`)
+      skipCount++
     }
   }
+
+  logSuccess('Firecrawl', getElapsed(timer), {
+    'geladen': successCount,
+    'übersprungen': skipCount
+  })
 
   return fetchedImages
 }
@@ -336,21 +372,27 @@ export function isFirecrawlAvailable() {
 export async function searchWithFirecrawl(query, limit = 5) {
   const client = getFirecrawlClient()
   if (!client) {
+    logError('Firecrawl', 'Client nicht initialisiert für Suche')
     throw new Error('Firecrawl client not initialized')
   }
 
-  try {
-    console.log(`[Firecrawl] Searching: "${query}" (limit: ${limit})`)
+  const timer = startTimer()
+  logRequest('Firecrawl', 'SEARCH', `"${query}"`, {
+    'Limit': limit
+  })
 
+  try {
     const result = await client.search(query, {
       limit: Math.min(limit, 10),
       lang: 'de',
       country: 'de'
     })
 
-    console.log(`[Firecrawl] Search results:`, result?.data?.length || 0)
-
     const data = result?.data || result || []
+
+    logSuccess('Firecrawl', getElapsed(timer), {
+      'Ergebnisse': data.length
+    })
 
     return data.map(item => ({
       url: item.url,
@@ -358,7 +400,7 @@ export async function searchWithFirecrawl(query, limit = 5) {
       snippet: item.description || item.metadata?.description || item.excerpt || ''
     }))
   } catch (error) {
-    console.error(`[Firecrawl] Search error:`, error.message)
+    logError('Firecrawl', error, { 'Query': query })
     throw new Error(`Firecrawl search error: ${error.message}`)
   }
 }

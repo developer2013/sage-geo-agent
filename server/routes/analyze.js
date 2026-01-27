@@ -5,6 +5,7 @@ import { fetchPageContent } from '../services/scraperService.js'
 import { analyzeWithClaude } from '../services/aiService.js'
 import { saveAnalysis, getRecentAnalysisByUrl, updateMonitoredUrlScore } from '../services/dbService.js'
 import { analyzeSerpFactors } from '../services/serpService.js'
+import { logSummary, logError, startTimer, getElapsed } from '../utils/debugLogger.js'
 
 const router = express.Router()
 
@@ -327,15 +328,65 @@ router.post('/stream', async (req, res) => {
     }
 
     sendProgress(1, 'Lade Webseite...')
-    console.log(`Analyzing: ${validUrl.href}`)
 
-    const pageCode = await fetchPageContent(validUrl.href)
+    // Track status for summary
+    const analysisStatus = {
+      firecrawl: null,
+      claude: null,
+      robotsTxt: undefined,
+      schemaCount: undefined
+    }
+
+    let pageCode
+    try {
+      pageCode = await fetchPageContent(validUrl.href)
+
+      // Capture Firecrawl status
+      if (pageCode.usedFirecrawl) {
+        analysisStatus.firecrawl = {
+          success: true,
+          duration: pageCode._debug?.duration,
+          htmlSize: pageCode.html?.length || 0,
+          hasScreenshot: !!pageCode.screenshot,
+          actionsSupported: !!pageCode.headingVisibility
+        }
+      }
+
+      analysisStatus.robotsTxt = !!pageCode.robotsTxt
+      analysisStatus.schemaCount = pageCode.schemaMarkup?.length || 0
+    } catch (scrapeError) {
+      analysisStatus.firecrawl = {
+        success: false,
+        error: scrapeError.message
+      }
+      throw scrapeError
+    }
 
     sendProgress(2, 'Analysiere mit KI...')
-    console.log(`[Analyze] Screenshot available: ${!!pageCode.screenshot}`)
-    console.log(`[Analyze] Images available: ${pageCode.images?.length || 0}`)
 
-    const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
+    let analysisResult
+    try {
+      analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
+
+      // Capture Claude status
+      analysisStatus.claude = {
+        success: true,
+        duration: analysisResult._debug?.duration,
+        inputTokens: analysisResult._debug?.inputTokens,
+        outputTokens: analysisResult._debug?.outputTokens,
+        parseSuccess: analysisResult._debug?.parseSuccess,
+        score: analysisResult.geoScore
+      }
+
+      // Remove debug info from result before sending to client
+      delete analysisResult._debug
+    } catch (claudeError) {
+      analysisStatus.claude = {
+        success: false,
+        error: claudeError.message
+      }
+      throw claudeError
+    }
 
     sendProgress(3, 'Erstelle Bericht...')
 
@@ -383,12 +434,13 @@ router.post('/stream', async (req, res) => {
       console.log(`[Monitor] Alert created for ${analysis.url}: ${monitorResult.change > 0 ? '+' : ''}${monitorResult.change} (${monitorResult.alertType})`)
     }
 
-    console.log(`Analysis complete: ${validUrl.href} - Score: ${analysis.geoScore}`)
+    // Log summary of all API calls
+    logSummary(validUrl.href, analysisStatus)
 
     res.write(`data: ${JSON.stringify({ type: 'complete', analysis })}\n\n`)
     res.end()
   } catch (error) {
-    console.error('Analysis error:', error)
+    logError('Analyze', error)
     res.write(`data: ${JSON.stringify({ type: 'error', error: error.message || 'Analyse fehlgeschlagen' })}\n\n`)
     res.end()
   }
@@ -426,14 +478,62 @@ router.post('/', async (req, res) => {
       }
     }
 
-    console.log(`Analyzing: ${validUrl.href}`)
+    // Track status for summary
+    const analysisStatus = {
+      firecrawl: null,
+      claude: null,
+      robotsTxt: undefined,
+      schemaCount: undefined
+    }
 
-    const pageCode = await fetchPageContent(validUrl.href)
+    let pageCode
+    try {
+      pageCode = await fetchPageContent(validUrl.href)
 
-    console.log(`[Analyze] Screenshot available: ${!!pageCode.screenshot}`)
-    console.log(`[Analyze] Images available: ${pageCode.images?.length || 0}`)
+      // Capture Firecrawl status
+      if (pageCode.usedFirecrawl) {
+        analysisStatus.firecrawl = {
+          success: true,
+          duration: pageCode._debug?.duration,
+          htmlSize: pageCode.html?.length || 0,
+          hasScreenshot: !!pageCode.screenshot,
+          actionsSupported: !!pageCode.headingVisibility
+        }
+      }
 
-    const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
+      analysisStatus.robotsTxt = !!pageCode.robotsTxt
+      analysisStatus.schemaCount = pageCode.schemaMarkup?.length || 0
+    } catch (scrapeError) {
+      analysisStatus.firecrawl = {
+        success: false,
+        error: scrapeError.message
+      }
+      throw scrapeError
+    }
+
+    let analysisResult
+    try {
+      analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
+
+      // Capture Claude status
+      analysisStatus.claude = {
+        success: true,
+        duration: analysisResult._debug?.duration,
+        inputTokens: analysisResult._debug?.inputTokens,
+        outputTokens: analysisResult._debug?.outputTokens,
+        parseSuccess: analysisResult._debug?.parseSuccess,
+        score: analysisResult.geoScore
+      }
+
+      // Remove debug info from result before sending to client
+      delete analysisResult._debug
+    } catch (claudeError) {
+      analysisStatus.claude = {
+        success: false,
+        error: claudeError.message
+      }
+      throw claudeError
+    }
 
     // Calculate content stats and performance metrics (pass headingVisibility for accurate H1 count)
     const contentStats = calculateContentStats(pageCode.html, validUrl.href, pageCode.headingVisibility)
@@ -479,11 +579,12 @@ router.post('/', async (req, res) => {
       console.log(`[Monitor] Alert created for ${analysis.url}: ${monitorResult.change > 0 ? '+' : ''}${monitorResult.change} (${monitorResult.alertType})`)
     }
 
-    console.log(`Analysis complete: ${validUrl.href} - Score: ${analysis.geoScore}`)
+    // Log summary of all API calls
+    logSummary(validUrl.href, analysisStatus)
 
     res.json(analysis)
   } catch (error) {
-    console.error('Analysis error:', error)
+    logError('Analyze', error)
     res.status(500).json({
       error: error.message || 'Analyse fehlgeschlagen'
     })
