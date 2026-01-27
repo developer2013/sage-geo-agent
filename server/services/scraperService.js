@@ -222,6 +222,7 @@ export function extractTextContent(html) {
   // - Hidden via inline styles (display:none, visibility:hidden)
   // - Hidden via common CSS classes (.hidden, .sr-only, .visually-hidden)
   // - Hidden via HTML attributes ([hidden])
+  // - Inside error modals/dialogs (typically class="message" or similar)
   $('template').remove()
   $('[style*="display: none"], [style*="display:none"]').remove()
   $('[style*="visibility: hidden"], [style*="visibility:hidden"]').remove()
@@ -229,6 +230,8 @@ export function extractTextContent(html) {
   $('.hidden, .sr-only, .visually-hidden, .screen-reader-only, .offscreen').remove()
   // Also remove elements with aria-hidden="true" that contain headings
   $('[aria-hidden="true"]').remove()
+  // Remove error/modal H1s (common patterns: class="message", inside .modal, .dialog, .error)
+  $('h1.message, .modal h1, .dialog h1, [role="dialog"] h1, [role="alertdialog"] h1').remove()
 
   // Get the main content
   const title = $('title').text().trim()
