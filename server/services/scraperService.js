@@ -229,57 +229,247 @@ export function extractTextContent(html, headingVisibility = null) {
   $('script, style, noscript, iframe, svg').remove()
 
   // Use browser-based visibility data if available (100% accurate)
-  // Otherwise fall back to static HTML analysis (best-effort)
+  // This is the SINGLE SOURCE OF TRUTH for heading analysis when Firecrawl provides it
   if (headingVisibility && Array.isArray(headingVisibility) && headingVisibility.length > 0) {
     console.log(`[Scraper] Using browser-based visibility for ${headingVisibility.length} headings`)
 
-    // Remove headings that browser detected as hidden
+    // Build headings array directly from visibility data (only visible headings)
+    const visibleHeadings = headingVisibility.filter(h => h.visible)
     const hiddenHeadings = headingVisibility.filter(h => !h.visible)
+
+    // Log hidden headings for debugging
     hiddenHeadings.forEach(hidden => {
-      // Find and remove matching hidden headings from DOM
-      const selector = hidden.tag.toLowerCase()
-      $(selector).each((_, el) => {
-        const text = $(el).text().trim()
-        // Match by first 50 chars of text content
-        if (text.substring(0, 50) === hidden.text.substring(0, 50)) {
-          console.log(`[Scraper] Removing hidden ${hidden.tag}: "${hidden.text.substring(0, 40)}..." (reason: ${hidden.reason})`)
-          $(el).remove()
-        }
+      console.log(`[Scraper] Hidden ${hidden.tag}: "${hidden.text.substring(0, 40)}..." (reason: ${hidden.reason})`)
+    })
+
+    // Build heading counts and analysis directly from visibility data
+    const headings = []
+    const headingCounts = { h1: 0, h2: 0, h3: 0, h4: 0, h5: 0, h6: 0 }
+    let questionsAsHeadings = 0
+
+    visibleHeadings.forEach((h, index) => {
+      const level = h.tag.toLowerCase()
+      const text = h.text
+      const isQuestion = /\?$/.test(text) || /^(was|wie|warum|wann|wo|wer|welche|können|kann|ist|sind|hat|haben|wird|werden|what|how|why|when|where|who|which|can|is|are|has|have|will|does|do)/i.test(text)
+
+      headingCounts[level]++
+      if (isQuestion) questionsAsHeadings++
+
+      headings.push({
+        level,
+        text,
+        isQuestion,
+        position: index + 1,
+        wordCount: text.split(/\s+/).length
       })
     })
-  } else {
-    // Fallback: Static HTML analysis (covers ~60% of cases)
-    console.log(`[Scraper] Using fallback static HTML analysis for hidden elements`)
 
-    // Remove hidden/invisible elements before heading analysis
-    // This prevents counting H1s that are:
-    // - Inside <template> tags (JS framework templates)
-    // - Hidden via inline styles (display:none, visibility:hidden)
-    // - Hidden via common CSS classes (.hidden, .sr-only, .visually-hidden)
-    // - Hidden via HTML attributes ([hidden])
-    // - Inside error modals/dialogs (typically class="message" or similar)
-    $('template').remove()
-    $('[style*="display: none"], [style*="display:none"]').remove()
-    $('[style*="visibility: hidden"], [style*="visibility:hidden"]').remove()
-    $('[hidden]').remove()
+    // Get first visible H1 for the h1 field
+    const firstVisibleH1 = visibleHeadings.find(h => h.tag.toUpperCase() === 'H1')
+    const h1 = firstVisibleH1?.text || ''
 
-    // Extended CSS class list for better fallback coverage
-    const hiddenClasses = [
-      '.hidden', '.sr-only', '.visually-hidden', '.screen-reader-only', '.offscreen',
-      // Bootstrap
-      '.d-none', '.invisible',
-      // Tailwind
-      '.collapse:not(.show)',
-      // Common patterns
-      '.hide', '.is-hidden', '.not-visible'
+    console.log(`[Scraper] Visible headings: ${visibleHeadings.length} (H1: ${headingCounts.h1}, H2: ${headingCounts.h2})`)
+
+    // Analyze heading hierarchy
+    const headingAnalysis = {
+      counts: headingCounts,
+      total: headings.length,
+      questionsCount: questionsAsHeadings,
+      hasProperHierarchy: headingCounts.h1 === 1 && headingCounts.h2 > 0,
+      hasH1: headingCounts.h1 > 0,
+      multipleH1: headingCounts.h1 > 1,
+      missingLevels: []
+    }
+
+    // Check for skipped heading levels
+    let lastLevel = 0
+    headings.forEach(h => {
+      const currentLevel = parseInt(h.level.charAt(1))
+      if (currentLevel > lastLevel + 1 && lastLevel > 0) {
+        headingAnalysis.missingLevels.push(`h${lastLevel + 1}`)
+      }
+      lastLevel = currentLevel
+    })
+
+    // Get the remaining content from DOM (non-heading content)
+    const title = $('title').text().trim()
+    const description = $('meta[name="description"]').attr('content') || ''
+
+    // Get FAQ sections
+    const faqItems = []
+    $('[itemtype*="FAQPage"], [itemtype*="Question"], .faq, #faq, [class*="faq"], [data-faq], .accordion, .faqs').find('h2, h3, h4, dt, [itemprop="name"], summary, .question').each((_, el) => {
+      const text = $(el).text().trim()
+      if (text.length > 5 && text.length < 300) {
+        faqItems.push(text)
+      }
+    })
+
+    // Get main body text
+    const bodyText = $('body').text().replace(/\s+/g, ' ').trim()
+
+    // First paragraph analysis
+    const firstParagraph = $('article p, main p, .content p, .entry-content p, p').first().text().trim()
+    const firstParagraphWords = firstParagraph.split(/\s+/).slice(0, 80).join(' ')
+
+    // Check for TL;DR or Summary section
+    const hasTldr = $('body').text().toLowerCase().includes('tl;dr') ||
+                    $('body').text().toLowerCase().includes('zusammenfassung') ||
+                    $('body').text().toLowerCase().includes('key takeaways') ||
+                    $('body').text().toLowerCase().includes('auf einen blick') ||
+                    $('body').text().toLowerCase().includes('das wichtigste')
+
+    // Count statistics and numbers in content
+    const statisticsMatches = bodyText.match(/\d+[\.,]?\d*\s*(%|prozent|percent|million|mio|milliarden|billion|euro|dollar|\$|€)/gi) || []
+    const yearReferences = bodyText.match(/\b(20[2-3]\d|19\d{2})\b/g) || []
+    const hasRecentYear = yearReferences.some(y => parseInt(y) >= 2024)
+
+    // Check for citations and sources
+    const citationPatterns = bodyText.match(/(laut|according to|quelle|source|studie|study|research|forschung|bericht|report)[\s:]+[A-Z][a-zA-ZäöüÄÖÜß\s]+/gi) || []
+    const hasExternalLinks = $('a[href^="http"]:not([href*="' + new URL('http://example.com').hostname + '"])').length
+
+    // Count lists (important for GEO)
+    const bulletLists = $('ul').length
+    const numberedLists = $('ol').length
+    const totalListItems = $('li').length
+
+    // Check for tables
+    const tables = $('table').length
+
+    // Author information
+    const authorInfo = {
+      hasAuthor: false,
+      authorName: null,
+      hasAuthorBio: false
+    }
+
+    const authorSelectors = [
+      '[rel="author"]', '.author', '.byline', '[itemprop="author"]',
+      '.post-author', '.article-author', '.autor', '.verfasser'
     ]
-    $(hiddenClasses.join(', ')).remove()
 
-    // Also remove elements with aria-hidden="true" that contain headings
-    $('[aria-hidden="true"]').remove()
-    // Remove error/modal H1s (common patterns: class="message", inside .modal, .dialog, .error)
-    $('h1.message, .modal h1, .dialog h1, [role="dialog"] h1, [role="alertdialog"] h1').remove()
+    authorSelectors.forEach(selector => {
+      const authorEl = $(selector).first()
+      if (authorEl.length) {
+        authorInfo.hasAuthor = true
+        authorInfo.authorName = authorEl.text().trim().substring(0, 100)
+      }
+    })
+
+    // Check for author bio
+    if ($('.author-bio, .author-description, .author-info, [itemprop="description"]').length) {
+      authorInfo.hasAuthorBio = true
+    }
+
+    // Date/Freshness check
+    const dateInfo = {
+      hasPublishDate: false,
+      hasModifiedDate: false,
+      publishDate: null,
+      modifiedDate: null
+    }
+
+    const publishDate = $('[itemprop="datePublished"], time[datetime], .publish-date, .post-date, .entry-date').first()
+    if (publishDate.length) {
+      dateInfo.hasPublishDate = true
+      dateInfo.publishDate = publishDate.attr('datetime') || publishDate.text().trim()
+    }
+
+    const modifiedDate = $('[itemprop="dateModified"]').first()
+    if (modifiedDate.length) {
+      dateInfo.hasModifiedDate = true
+      dateInfo.modifiedDate = modifiedDate.attr('datetime') || modifiedDate.text().trim()
+    }
+
+    // Word count
+    const wordCount = bodyText.split(/\s+/).length
+
+    // Image analysis for alt-text quality
+    const imageAnalysis = {
+      total: $('img').length,
+      withAlt: $('img[alt]').filter((_, el) => $(el).attr('alt').trim().length > 0).length,
+      withoutAlt: 0,
+      altTexts: []
+    }
+    imageAnalysis.withoutAlt = imageAnalysis.total - imageAnalysis.withAlt
+
+    $('img[alt]').each((_, el) => {
+      const alt = $(el).attr('alt').trim()
+      if (alt.length > 0) {
+        imageAnalysis.altTexts.push(alt.substring(0, 100))
+      }
+    })
+
+    // Content structure score elements
+    const structureAnalysis = {
+      hasLists: bulletLists > 0 || numberedLists > 0,
+      bulletLists,
+      numberedLists,
+      totalListItems,
+      hasTables: tables > 0,
+      tableCount: tables,
+      hasImages: $('img').length,
+      hasVideos: $('video, iframe[src*="youtube"], iframe[src*="vimeo"]').length,
+      hasTldr,
+      hasStatistics: statisticsMatches.length > 0,
+      statisticsCount: statisticsMatches.length,
+      hasCitations: citationPatterns.length > 0,
+      citationsCount: citationPatterns.length,
+      hasExternalLinks: hasExternalLinks > 0,
+      externalLinksCount: hasExternalLinks,
+      hasRecentData: hasRecentYear,
+      wordCount,
+      estimatedReadTime: Math.ceil(wordCount / 200),
+      imageAnalysis
+    }
+
+    // Return early with browser-based heading data
+    return {
+      title,
+      h1,
+      description,
+      headings,
+      headingAnalysis,
+      faqItems,
+      bodyText: bodyText.substring(0, 8000),
+      firstParagraph: firstParagraphWords,
+      authorInfo,
+      dateInfo,
+      structureAnalysis
+    }
   }
+
+  // FALLBACK: Static HTML analysis when headingVisibility is not available
+  // This covers ~60% of cases (CSS classes, inline styles, common patterns)
+  console.log(`[Scraper] Using fallback static HTML analysis for hidden elements`)
+
+  // Remove hidden/invisible elements before heading analysis
+  // This prevents counting H1s that are:
+  // - Inside <template> tags (JS framework templates)
+  // - Hidden via inline styles (display:none, visibility:hidden)
+  // - Hidden via common CSS classes (.hidden, .sr-only, .visually-hidden)
+  // - Hidden via HTML attributes ([hidden])
+  // - Inside error modals/dialogs (typically class="message" or similar)
+  $('template').remove()
+  $('[style*="display: none"], [style*="display:none"]').remove()
+  $('[style*="visibility: hidden"], [style*="visibility:hidden"]').remove()
+  $('[hidden]').remove()
+
+  // Extended CSS class list for better fallback coverage
+  const hiddenClasses = [
+    '.hidden', '.sr-only', '.visually-hidden', '.screen-reader-only', '.offscreen',
+    // Bootstrap
+    '.d-none', '.invisible',
+    // Tailwind
+    '.collapse:not(.show)',
+    // Common patterns
+    '.hide', '.is-hidden', '.not-visible'
+  ]
+  $(hiddenClasses.join(', ')).remove()
+
+  // Also remove elements with aria-hidden="true" that contain headings
+  $('[aria-hidden="true"]').remove()
+  // Remove error/modal H1s (common patterns: class="message", inside .modal, .dialog, .error)
+  $('h1.message, .modal h1, .dialog h1, [role="dialog"] h1, [role="alertdialog"] h1').remove()
 
   // Get the main content
   const title = $('title').text().trim()
