@@ -5,7 +5,7 @@ import { fetchPageContent } from '../services/scraperService.js'
 import { analyzeWithClaude } from '../services/aiService.js'
 import { saveAnalysis, getRecentAnalysisByUrl, updateMonitoredUrlScore } from '../services/dbService.js'
 import { analyzeSerpFactors } from '../services/serpService.js'
-import { logSummary, logError, startTimer, getElapsed } from '../utils/debugLogger.js'
+import { logSummary, logError, logSuccess, startTimer, getElapsed } from '../utils/debugLogger.js'
 
 const router = express.Router()
 
@@ -298,8 +298,6 @@ router.post('/stream', async (req, res) => {
       maxImages: Math.min(5, Math.max(1, imageSettings?.maxImages ?? 3))
     }
 
-    console.log(`[Analyze] Image settings:`, settings)
-
     if (!url) {
       res.write(`data: ${JSON.stringify({ type: 'error', error: 'URL ist erforderlich' })}\n\n`)
       res.end()
@@ -320,7 +318,7 @@ router.post('/stream', async (req, res) => {
       sendProgress(1, 'Prüfe Cache...')
       const cached = getRecentAnalysisByUrl(validUrl.href, 24)
       if (cached) {
-        console.log(`[Analyze] Returning cached analysis for: ${validUrl.href}`)
+        logSuccess('Analyze', 0, { 'Cache': 'Hit', 'URL': validUrl.hostname })
         res.write(`data: ${JSON.stringify({ type: 'complete', analysis: cached })}\n\n`)
         res.end()
         return
@@ -473,7 +471,7 @@ router.post('/', async (req, res) => {
     if (!forceRefresh) {
       const cached = getRecentAnalysisByUrl(validUrl.href, 24)
       if (cached) {
-        console.log(`[Analyze] Returning cached analysis for: ${validUrl.href}`)
+        logSuccess('Analyze', 0, { 'Cache': 'Hit', 'URL': validUrl.hostname })
         return res.json(cached)
       }
     }

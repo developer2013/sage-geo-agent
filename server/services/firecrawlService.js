@@ -220,7 +220,7 @@ export async function getRobotsTxt(url) {
     const urlObj = new URL(url)
     const robotsUrl = `${urlObj.protocol}//${urlObj.host}/robots.txt`
 
-    console.log(`[Firecrawl] Fetching robots.txt: ${robotsUrl}`)
+    logRequest('Firecrawl', 'FETCH', 'robots.txt')
 
     const result = await client.scrape(robotsUrl, {
       formats: ['markdown'],
@@ -233,7 +233,7 @@ export async function getRobotsTxt(url) {
 
     return null
   } catch (error) {
-    console.log(`[Firecrawl] robots.txt not available: ${error.message}`)
+    logWarning('Firecrawl', `robots.txt nicht verfügbar: ${error.message}`)
     return null
   }
 }
@@ -421,7 +421,7 @@ export async function fetchSitemap(url) {
       ? url
       : `${urlObj.protocol}//${urlObj.host}/sitemap.xml`
 
-    console.log(`[Firecrawl] Fetching sitemap: ${sitemapUrl}`)
+    logRequest('Firecrawl', 'FETCH', 'sitemap.xml')
 
     const result = await client.scrape(sitemapUrl, {
       formats: ['markdown', 'html'],
@@ -451,7 +451,7 @@ export async function fetchSitemap(url) {
       }
     }
 
-    console.log(`[Firecrawl] Found ${urls.length} URLs in sitemap`)
+    logSuccess('Firecrawl', 0, { 'URLs': urls.length })
 
     return {
       sitemapUrl,
@@ -459,7 +459,7 @@ export async function fetchSitemap(url) {
       success: true
     }
   } catch (error) {
-    console.error(`[Firecrawl] Sitemap error:`, error.message)
+    logError('Firecrawl', error, { 'Kontext': 'Sitemap fetch' })
     throw new Error(`Sitemap fetch error: ${error.message}`)
   }
 }
