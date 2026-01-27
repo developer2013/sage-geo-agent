@@ -80,9 +80,11 @@ export async function scrapeWithFirecrawl(url) {
     })
 
     console.log(`[Firecrawl] Result keys:`, Object.keys(result || {}))
+    console.log(`[Firecrawl] Result.data keys:`, Object.keys(result?.data || {}))
 
     // Handle different response formats from Firecrawl SDK
     const doc = result?.data || result
+    console.log(`[Firecrawl] Doc keys:`, Object.keys(doc || {}))
 
     if (!doc || (!doc.html && !doc.markdown)) {
       console.error(`[Firecrawl] Empty or invalid response:`, JSON.stringify(result).substring(0, 500))
@@ -128,20 +130,46 @@ export async function scrapeWithFirecrawl(url) {
     console.log(`[Firecrawl] rawHtml available: ${!!doc.rawHtml}, length: ${doc.rawHtml?.length || 0}`)
 
     // Extract heading visibility data from actions result
+    // Firecrawl may return actions data in different formats depending on SDK version
     let headingVisibility = null
-    if (doc.actions && Array.isArray(doc.actions) && doc.actions.length > 0) {
-      const visibilityResult = doc.actions[0]
-      if (visibilityResult && visibilityResult.result) {
-        headingVisibility = visibilityResult.result
+
+    // Debug: Log all potential action-related fields
+    if (doc.actions) {
+      console.log(`[Firecrawl] doc.actions type:`, typeof doc.actions, Array.isArray(doc.actions) ? `(array, length: ${doc.actions.length})` : '')
+      console.log(`[Firecrawl] doc.actions content:`, JSON.stringify(doc.actions).substring(0, 500))
+    }
+    if (doc.actionResults) {
+      console.log(`[Firecrawl] doc.actionResults found:`, JSON.stringify(doc.actionResults).substring(0, 500))
+    }
+    if (doc.executeJavascript) {
+      console.log(`[Firecrawl] doc.executeJavascript found:`, JSON.stringify(doc.executeJavascript).substring(0, 500))
+    }
+
+    // Try multiple possible locations for action results
+    const actionsData = doc.actions || doc.actionResults || doc.executeJavascript
+
+    if (actionsData && Array.isArray(actionsData) && actionsData.length > 0) {
+      const visibilityResult = actionsData[0]
+      // Try different possible structures for the result
+      const resultData = visibilityResult?.result || visibilityResult?.data || visibilityResult
+
+      if (resultData && Array.isArray(resultData)) {
+        headingVisibility = resultData
         console.log(`[Firecrawl] Heading visibility data:`, {
           total: headingVisibility.length,
           visible: headingVisibility.filter(h => h.visible).length,
           hidden: headingVisibility.filter(h => !h.visible).length,
           hiddenReasons: headingVisibility.filter(h => !h.visible).map(h => `${h.tag}: ${h.reason}`)
         })
+      } else {
+        console.log(`[Firecrawl] Actions result structure unexpected:`, typeof resultData, JSON.stringify(resultData).substring(0, 200))
       }
+    } else if (actionsData) {
+      // actionsData exists but is not an array - log its structure
+      console.log(`[Firecrawl] actionsData is not an array:`, typeof actionsData, JSON.stringify(actionsData).substring(0, 500))
     } else {
-      console.log(`[Firecrawl] No actions result - executeJavascript may not be supported or failed`)
+      console.log(`[Firecrawl] No actions result - executeJavascript may not be supported on this Firecrawl plan`)
+      console.log(`[Firecrawl] Available doc fields for debugging:`, Object.keys(doc).filter(k => !['html', 'rawHtml', 'markdown', 'screenshot', 'links'].includes(k)))
     }
 
     return {

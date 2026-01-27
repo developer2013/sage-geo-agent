@@ -456,20 +456,38 @@ export function extractTextContent(html, headingVisibility = null) {
 
   // Extended CSS class list for better fallback coverage
   const hiddenClasses = [
+    // Standard accessibility patterns
     '.hidden', '.sr-only', '.visually-hidden', '.screen-reader-only', '.offscreen',
     // Bootstrap
     '.d-none', '.invisible',
     // Tailwind
     '.collapse:not(.show)',
     // Common patterns
-    '.hide', '.is-hidden', '.not-visible'
+    '.hide', '.is-hidden', '.not-visible',
+    // Error/message patterns (Sage-specific and general)
+    '.message', '.error-message', '.modal-title', '.alert-title',
+    // Popup/overlay patterns
+    '.popup-title', '.overlay-title', '.lightbox-title'
   ]
   $(hiddenClasses.join(', ')).remove()
 
   // Also remove elements with aria-hidden="true" that contain headings
   $('[aria-hidden="true"]').remove()
+
   // Remove error/modal H1s (common patterns: class="message", inside .modal, .dialog, .error)
-  $('h1.message, .modal h1, .dialog h1, [role="dialog"] h1, [role="alertdialog"] h1').remove()
+  // Extended to catch more modal/dialog patterns commonly used
+  const modalSelectors = [
+    'h1.message',
+    '.modal h1', '.modal-dialog h1', '.modal-content h1',
+    '.dialog h1', '.popup h1', '.overlay h1', '.lightbox h1',
+    '[role="dialog"] h1', '[role="alertdialog"] h1',
+    '.error h1', '.error-container h1',
+    // Generic hidden header patterns
+    'header.hidden h1', 'header.d-none h1',
+    // Sage-specific patterns (error messages, cookie banners)
+    '.cookie-banner h1', '.gdpr-banner h1', '.consent-banner h1'
+  ]
+  $(modalSelectors.join(', ')).remove()
 
   // Get the main content
   const title = $('title').text().trim()
