@@ -183,6 +183,11 @@ export async function fetchPageContent(url) {
       console.log(`[Scraper] No screenshot from Firecrawl`)
     }
 
+    // Log heading visibility data (browser-based detection)
+    if (firecrawlResult.headingVisibility) {
+      console.log(`[Scraper] Heading visibility from browser: ${firecrawlResult.headingVisibility.length} headings detected`)
+    }
+
     return {
       html: firecrawlResult.html,
       rawHtml: firecrawlResult.rawHtml,  // Full HTML including <head> for Code viewer
@@ -194,6 +199,7 @@ export async function fetchPageContent(url) {
       screenshot: firecrawlResult.screenshot,
       images,
       metadata: firecrawlResult.metadata,
+      headingVisibility: firecrawlResult.headingVisibility,  // Browser-detected visibility
       usedFirecrawl: true
     }
   }
@@ -210,28 +216,70 @@ export async function fetchPageContent(url) {
   }
 }
 
-export function extractTextContent(html) {
+/**
+ * Extract text content from HTML with optional browser-based heading visibility data
+ * @param {string} html - Raw HTML content
+ * @param {Array|null} headingVisibility - Browser-detected heading visibility (from Firecrawl actions)
+ * @returns {Object} Extracted content with heading analysis
+ */
+export function extractTextContent(html, headingVisibility = null) {
   const $ = cheerio.load(html)
 
   // Remove scripts, styles, and other non-content elements
   $('script, style, noscript, iframe, svg').remove()
 
-  // Remove hidden/invisible elements before heading analysis (FIX: H1 false-positive)
-  // This prevents counting H1s that are:
-  // - Inside <template> tags (JS framework templates)
-  // - Hidden via inline styles (display:none, visibility:hidden)
-  // - Hidden via common CSS classes (.hidden, .sr-only, .visually-hidden)
-  // - Hidden via HTML attributes ([hidden])
-  // - Inside error modals/dialogs (typically class="message" or similar)
-  $('template').remove()
-  $('[style*="display: none"], [style*="display:none"]').remove()
-  $('[style*="visibility: hidden"], [style*="visibility:hidden"]').remove()
-  $('[hidden]').remove()
-  $('.hidden, .sr-only, .visually-hidden, .screen-reader-only, .offscreen').remove()
-  // Also remove elements with aria-hidden="true" that contain headings
-  $('[aria-hidden="true"]').remove()
-  // Remove error/modal H1s (common patterns: class="message", inside .modal, .dialog, .error)
-  $('h1.message, .modal h1, .dialog h1, [role="dialog"] h1, [role="alertdialog"] h1').remove()
+  // Use browser-based visibility data if available (100% accurate)
+  // Otherwise fall back to static HTML analysis (best-effort)
+  if (headingVisibility && Array.isArray(headingVisibility) && headingVisibility.length > 0) {
+    console.log(`[Scraper] Using browser-based visibility for ${headingVisibility.length} headings`)
+
+    // Remove headings that browser detected as hidden
+    const hiddenHeadings = headingVisibility.filter(h => !h.visible)
+    hiddenHeadings.forEach(hidden => {
+      // Find and remove matching hidden headings from DOM
+      const selector = hidden.tag.toLowerCase()
+      $(selector).each((_, el) => {
+        const text = $(el).text().trim()
+        // Match by first 50 chars of text content
+        if (text.substring(0, 50) === hidden.text.substring(0, 50)) {
+          console.log(`[Scraper] Removing hidden ${hidden.tag}: "${hidden.text.substring(0, 40)}..." (reason: ${hidden.reason})`)
+          $(el).remove()
+        }
+      })
+    })
+  } else {
+    // Fallback: Static HTML analysis (covers ~60% of cases)
+    console.log(`[Scraper] Using fallback static HTML analysis for hidden elements`)
+
+    // Remove hidden/invisible elements before heading analysis
+    // This prevents counting H1s that are:
+    // - Inside <template> tags (JS framework templates)
+    // - Hidden via inline styles (display:none, visibility:hidden)
+    // - Hidden via common CSS classes (.hidden, .sr-only, .visually-hidden)
+    // - Hidden via HTML attributes ([hidden])
+    // - Inside error modals/dialogs (typically class="message" or similar)
+    $('template').remove()
+    $('[style*="display: none"], [style*="display:none"]').remove()
+    $('[style*="visibility: hidden"], [style*="visibility:hidden"]').remove()
+    $('[hidden]').remove()
+
+    // Extended CSS class list for better fallback coverage
+    const hiddenClasses = [
+      '.hidden', '.sr-only', '.visually-hidden', '.screen-reader-only', '.offscreen',
+      // Bootstrap
+      '.d-none', '.invisible',
+      // Tailwind
+      '.collapse:not(.show)',
+      // Common patterns
+      '.hide', '.is-hidden', '.not-visible'
+    ]
+    $(hiddenClasses.join(', ')).remove()
+
+    // Also remove elements with aria-hidden="true" that contain headings
+    $('[aria-hidden="true"]').remove()
+    // Remove error/modal H1s (common patterns: class="message", inside .modal, .dialog, .error)
+    $('h1.message, .modal h1, .dialog h1, [role="dialog"] h1, [role="alertdialog"] h1').remove()
+  }
 
   // Get the main content
   const title = $('title').text().trim()

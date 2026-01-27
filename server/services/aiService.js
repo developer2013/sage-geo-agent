@@ -286,7 +286,8 @@ export async function analyzeWithClaude(url, pageContent, pageCode, imageSetting
 
   console.log(`[AI] Image settings: screenshot=${settings.includeScreenshot}, images=${settings.includeImages}, maxImages=${settings.maxImages}`)
 
-  const textContent = extractTextContent(pageCode.html)
+  // Pass browser-detected heading visibility for accurate H1 counting
+  const textContent = extractTextContent(pageCode.html, pageCode.headingVisibility)
 
   // FIX: Get title and description from metaTags/metadata (extracted from rawHtml) because pageCode.html doesn't include <head>
   const descriptionFromMeta = pageCode.metaTags?.find(t => t.name?.toLowerCase() === 'description')?.content

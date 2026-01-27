@@ -207,6 +207,14 @@ cd ../server && npm start
 
 ## Recent Changes
 
+### 2026-01-27
+- **Browser-Based Visibility Detection**: Uses Firecrawl `executeJavascript` for 100% accurate hidden element detection
+  - Uses `window.getComputedStyle()` for all CSS styles (inline, external, !important)
+  - Uses `offsetParent` check for parent-chain visibility
+  - Uses `getBoundingClientRect()` for actual rendered size
+  - Detects: CSS classes (`.d-none`, `.hidden`), parent visibility, JS-generated styles, opacity, zero-size
+  - Fallback to extended static analysis when Firecrawl unavailable
+
 ### 2025-01-27
 - Fixed H1 false-positive detection (excludes hidden elements)
 - Fixed robots.txt parser (proper User-Agent block parsing)

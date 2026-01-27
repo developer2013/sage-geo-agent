@@ -11,8 +11,11 @@ const router = express.Router()
 /**
  * Calculate content statistics from HTML
  * Uses deduplication to count unique images and links only
+ * @param {string} html - HTML content
+ * @param {string} baseUrl - Base URL for resolving relative links
+ * @param {Array|null} headingVisibility - Browser-detected heading visibility
  */
-function calculateContentStats(html, baseUrl) {
+function calculateContentStats(html, baseUrl, headingVisibility = null) {
   const $ = cheerio.load(html)
 
   // Remove non-content elements for accurate statistics
@@ -158,14 +161,27 @@ function calculateContentStats(html, baseUrl) {
   const internalLinks = uniqueInternalLinks.size
   const externalLinks = uniqueExternalLinks.size
 
-  // Count headings
-  const headingStructure = {
-    h1: $('h1').length,
-    h2: $('h2').length,
-    h3: $('h3').length,
-    h4: $('h4').length,
-    h5: $('h5').length,
-    h6: $('h6').length
+  // Count headings - use browser visibility data if available
+  let headingStructure
+  if (headingVisibility && Array.isArray(headingVisibility) && headingVisibility.length > 0) {
+    // Use accurate browser-detected visibility (counts only visible headings)
+    headingStructure = { h1: 0, h2: 0, h3: 0, h4: 0, h5: 0, h6: 0 }
+    headingVisibility.filter(h => h.visible).forEach(h => {
+      const level = h.tag.toLowerCase()
+      if (headingStructure.hasOwnProperty(level)) {
+        headingStructure[level]++
+      }
+    })
+  } else {
+    // Fallback: count all headings from DOM
+    headingStructure = {
+      h1: $('h1').length,
+      h2: $('h2').length,
+      h3: $('h3').length,
+      h4: $('h4').length,
+      h5: $('h5').length,
+      h6: $('h6').length
+    }
   }
 
   // Count lists and tables
@@ -322,8 +338,8 @@ router.post('/stream', async (req, res) => {
 
     sendProgress(3, 'Erstelle Bericht...')
 
-    // Calculate content stats and performance metrics
-    const contentStats = calculateContentStats(pageCode.html, validUrl.href)
+    // Calculate content stats and performance metrics (pass headingVisibility for accurate H1 count)
+    const contentStats = calculateContentStats(pageCode.html, validUrl.href, pageCode.headingVisibility)
     const performanceMetrics = calculatePerformanceMetrics(pageCode.html, contentStats)
 
     // Calculate SERP click-worthiness analysis
@@ -418,8 +434,8 @@ router.post('/', async (req, res) => {
 
     const analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
 
-    // Calculate content stats and performance metrics
-    const contentStats = calculateContentStats(pageCode.html, validUrl.href)
+    // Calculate content stats and performance metrics (pass headingVisibility for accurate H1 count)
+    const contentStats = calculateContentStats(pageCode.html, validUrl.href, pageCode.headingVisibility)
     const performanceMetrics = calculatePerformanceMetrics(pageCode.html, contentStats)
 
     // Calculate SERP click-worthiness analysis

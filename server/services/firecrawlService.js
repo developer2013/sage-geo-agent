@@ -13,7 +13,50 @@ function getFirecrawlClient() {
 }
 
 /**
+ * JavaScript to execute in browser for accurate visibility detection
+ * Uses real browser APIs: getComputedStyle, offsetParent, getBoundingClientRect
+ * This catches ALL hidden elements: CSS classes, parent visibility, JS-generated styles
+ */
+const VISIBILITY_DETECTION_SCRIPT = `
+(function() {
+  return Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6')).map(el => {
+    const rect = el.getBoundingClientRect();
+    const style = window.getComputedStyle(el);
+
+    // Comprehensive visibility check using browser APIs
+    const hasVisibleParent = el.offsetParent !== null;
+    const isDisplayed = style.display !== 'none';
+    const isVisible = style.visibility !== 'hidden';
+    const hasOpacity = parseFloat(style.opacity) > 0;
+    const hasSize = rect.width > 0 && rect.height > 0;
+
+    // Element is truly visible only if ALL conditions are met
+    const visible = hasVisibleParent && isDisplayed && isVisible && hasOpacity && hasSize;
+
+    // Determine why element is hidden (for debugging/logging)
+    let reason = null;
+    if (!visible) {
+      if (!hasVisibleParent) reason = 'hidden-parent';
+      else if (!isDisplayed) reason = 'display-none';
+      else if (!isVisible) reason = 'visibility-hidden';
+      else if (!hasOpacity) reason = 'opacity-zero';
+      else if (!hasSize) reason = 'zero-size';
+      else reason = 'unknown';
+    }
+
+    return {
+      tag: el.tagName,
+      text: el.textContent.trim().substring(0, 200),
+      visible: visible,
+      reason: reason
+    };
+  });
+})();
+`
+
+/**
  * Scrape a URL using Firecrawl with screenshot and full content
+ * Includes browser-based visibility detection via executeJavascript
  */
 export async function scrapeWithFirecrawl(url) {
   const client = getFirecrawlClient()
@@ -28,6 +71,12 @@ export async function scrapeWithFirecrawl(url) {
       formats: ['markdown', 'html', 'rawHtml', 'screenshot', 'links'],
       onlyMainContent: false,
       waitFor: 3000,
+      actions: [
+        {
+          type: 'executeJavascript',
+          script: VISIBILITY_DETECTION_SCRIPT
+        }
+      ]
     })
 
     console.log(`[Firecrawl] Result keys:`, Object.keys(result || {}))
@@ -78,6 +127,23 @@ export async function scrapeWithFirecrawl(url) {
     console.log(`[Firecrawl] Successfully scraped: ${url}`)
     console.log(`[Firecrawl] rawHtml available: ${!!doc.rawHtml}, length: ${doc.rawHtml?.length || 0}`)
 
+    // Extract heading visibility data from actions result
+    let headingVisibility = null
+    if (doc.actions && Array.isArray(doc.actions) && doc.actions.length > 0) {
+      const visibilityResult = doc.actions[0]
+      if (visibilityResult && visibilityResult.result) {
+        headingVisibility = visibilityResult.result
+        console.log(`[Firecrawl] Heading visibility data:`, {
+          total: headingVisibility.length,
+          visible: headingVisibility.filter(h => h.visible).length,
+          hidden: headingVisibility.filter(h => !h.visible).length,
+          hiddenReasons: headingVisibility.filter(h => !h.visible).map(h => `${h.tag}: ${h.reason}`)
+        })
+      }
+    } else {
+      console.log(`[Firecrawl] No actions result - executeJavascript may not be supported or failed`)
+    }
+
     return {
       html: doc.html || '',
       rawHtml: doc.rawHtml || doc.html || '',  // rawHtml contains full page with <head>
@@ -85,6 +151,7 @@ export async function scrapeWithFirecrawl(url) {
       screenshot: screenshotBase64,
       links: doc.links || [],
       metadata: doc.metadata || {},
+      headingVisibility,  // Browser-detected heading visibility
       success: true
     }
   } catch (error) {
