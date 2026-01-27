@@ -348,7 +348,7 @@ router.post('/stream', async (req, res) => {
       performanceMetrics,
       serpAnalysis,
       pageCode: {
-        html: pageCode.html,
+        html: pageCode.rawHtml || pageCode.html,  // Use rawHtml (full page) for display, fallback to processed html
         markdown: pageCode.markdown || null,  // For better Claude chat context
         metaTags: pageCode.metaTags,
         schemaMarkup: pageCode.schemaMarkup,
@@ -444,7 +444,7 @@ router.post('/', async (req, res) => {
       performanceMetrics,
       serpAnalysis,
       pageCode: {
-        html: pageCode.html,
+        html: pageCode.rawHtml || pageCode.html,  // Use rawHtml (full page) for display, fallback to processed html
         markdown: pageCode.markdown || null,  // For better Claude chat context
         metaTags: pageCode.metaTags,
         schemaMarkup: pageCode.schemaMarkup,

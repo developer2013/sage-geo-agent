@@ -185,6 +185,7 @@ export async function fetchPageContent(url) {
 
     return {
       html: firecrawlResult.html,
+      rawHtml: firecrawlResult.rawHtml,  // Full HTML including <head> for Code viewer
       markdown: firecrawlResult.markdown,
       metaTags,
       schemaMarkup,
@@ -202,6 +203,7 @@ export async function fetchPageContent(url) {
   const fallbackResult = await fetchPageContentFallback(url)
   return {
     ...fallbackResult,
+    rawHtml: fallbackResult.html,  // Fallback html IS the full raw HTML
     markdown: null,
     metadata: null,
     usedFirecrawl: false
