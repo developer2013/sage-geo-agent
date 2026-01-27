@@ -112,6 +112,54 @@ export function initDatabase() {
     ON score_alerts(seen, created_at DESC)
   `).run()
 
+  // GEO References table for tracking external sources
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS geo_references (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      description TEXT,
+      last_checked TEXT,
+      last_content_hash TEXT,
+      check_interval_hours INTEGER DEFAULT 24,
+      enabled INTEGER DEFAULT 1,
+      notes TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `).run()
+
+  db.prepare(`
+    CREATE INDEX IF NOT EXISTS idx_geo_references_category
+    ON geo_references(category)
+  `).run()
+
+  db.prepare(`
+    CREATE INDEX IF NOT EXISTS idx_geo_references_enabled
+    ON geo_references(enabled, last_checked)
+  `).run()
+
+  // GEO Reference alerts table
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS geo_reference_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reference_id INTEGER NOT NULL,
+      alert_type TEXT NOT NULL,
+      title TEXT,
+      description TEXT,
+      old_hash TEXT,
+      new_hash TEXT,
+      seen INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (reference_id) REFERENCES geo_references(id) ON DELETE CASCADE
+    )
+  `).run()
+
+  db.prepare(`
+    CREATE INDEX IF NOT EXISTS idx_geo_reference_alerts_seen
+    ON geo_reference_alerts(seen, created_at DESC)
+  `).run()
+
   console.log('Database initialized')
   return db
 }
@@ -673,4 +721,228 @@ export function toggleMonitoredUrl(id, enabled) {
   const db = getDb()
   const stmt = db.prepare('UPDATE monitored_urls SET enabled = ? WHERE id = ?')
   return stmt.run(enabled ? 1 : 0, id)
+}
+
+// ==========================================
+// GEO REFERENCES - External Source Tracking
+// ==========================================
+
+/**
+ * Add a GEO reference source
+ * @param {Object} reference - Reference data
+ * @param {string} reference.url - URL to track
+ * @param {string} reference.name - Display name
+ * @param {string} reference.category - Category: 'research', 'news', 'competitor', 'tool'
+ * @param {string} [reference.description] - Optional description
+ * @param {number} [reference.checkIntervalHours] - Check interval in hours (default 24)
+ * @param {string} [reference.notes] - Optional notes
+ */
+export function addGeoReference({ url, name, category, description = null, checkIntervalHours = 24, notes = null }) {
+  const db = getDb()
+
+  // Validate category
+  const validCategories = ['research', 'news', 'competitor', 'tool']
+  if (!validCategories.includes(category)) {
+    return { success: false, error: `Ungueltige Kategorie: ${category}. Erlaubt: ${validCategories.join(', ')}` }
+  }
+
+  // Check if already exists
+  const existing = db.prepare('SELECT id FROM geo_references WHERE url = ?').get(url)
+  if (existing) {
+    return { success: false, error: 'URL ist bereits als GEO-Referenz gespeichert' }
+  }
+
+  const stmt = db.prepare(`
+    INSERT INTO geo_references (url, name, category, description, check_interval_hours, notes)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+
+  const result = stmt.run(url, name, category, description, checkIntervalHours, notes)
+  return { success: true, id: result.lastInsertRowid }
+}
+
+/**
+ * Get all GEO references, optionally filtered by category
+ * @param {string} [category] - Optional category filter
+ */
+export function getGeoReferences(category = null) {
+  const db = getDb()
+
+  let stmt
+  if (category) {
+    stmt = db.prepare(`
+      SELECT
+        id,
+        url,
+        name,
+        category,
+        description,
+        last_checked as lastChecked,
+        last_content_hash as lastContentHash,
+        check_interval_hours as checkIntervalHours,
+        enabled,
+        notes,
+        created_at as createdAt
+      FROM geo_references
+      WHERE category = ?
+      ORDER BY name ASC
+    `)
+    return stmt.all(category)
+  }
+
+  stmt = db.prepare(`
+    SELECT
+      id,
+      url,
+      name,
+      category,
+      description,
+      last_checked as lastChecked,
+      last_content_hash as lastContentHash,
+      check_interval_hours as checkIntervalHours,
+      enabled,
+      notes,
+      created_at as createdAt
+    FROM geo_references
+    ORDER BY category, name ASC
+  `)
+  return stmt.all()
+}
+
+/**
+ * Get GEO references that need checking
+ * @returns {Array} References where last_checked is null or older than check_interval_hours
+ */
+export function getGeoReferencesToCheck() {
+  const db = getDb()
+  const stmt = db.prepare(`
+    SELECT
+      id,
+      url,
+      name,
+      category,
+      last_content_hash as lastContentHash,
+      check_interval_hours as checkIntervalHours
+    FROM geo_references
+    WHERE enabled = 1
+    AND (
+      last_checked IS NULL
+      OR datetime(last_checked, '+' || check_interval_hours || ' hours') < datetime('now')
+    )
+    ORDER BY last_checked ASC NULLS FIRST
+  `)
+  return stmt.all()
+}
+
+/**
+ * Update GEO reference after checking
+ * @param {number} id - Reference ID
+ * @param {string} contentHash - Hash of content for change detection
+ */
+export function updateGeoReferenceCheck(id, contentHash) {
+  const db = getDb()
+  const stmt = db.prepare(`
+    UPDATE geo_references
+    SET last_checked = datetime('now'), last_content_hash = ?
+    WHERE id = ?
+  `)
+  return stmt.run(contentHash, id)
+}
+
+/**
+ * Remove a GEO reference
+ * @param {number} id - Reference ID
+ */
+export function removeGeoReference(id) {
+  const db = getDb()
+  const result = db.prepare('DELETE FROM geo_references WHERE id = ?').run(id)
+  return result.changes > 0
+}
+
+/**
+ * Toggle GEO reference enabled state
+ * @param {number} id - Reference ID
+ * @param {boolean} enabled - Enable or disable
+ */
+export function toggleGeoReference(id, enabled) {
+  const db = getDb()
+  const stmt = db.prepare('UPDATE geo_references SET enabled = ? WHERE id = ?')
+  return stmt.run(enabled ? 1 : 0, id)
+}
+
+/**
+ * Create a GEO reference alert (content changed)
+ * @param {number} referenceId - Reference ID
+ * @param {string} alertType - Alert type: 'content_changed', 'new_content', 'error'
+ * @param {string} title - Alert title
+ * @param {string} description - Alert description
+ * @param {string} [oldHash] - Previous content hash
+ * @param {string} [newHash] - New content hash
+ */
+export function createGeoReferenceAlert(referenceId, alertType, title, description, oldHash = null, newHash = null) {
+  const db = getDb()
+  const stmt = db.prepare(`
+    INSERT INTO geo_reference_alerts (reference_id, alert_type, title, description, old_hash, new_hash)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  return stmt.run(referenceId, alertType, title, description, oldHash, newHash)
+}
+
+/**
+ * Get unseen GEO reference alerts
+ */
+export function getUnseenGeoReferenceAlerts() {
+  const db = getDb()
+  const stmt = db.prepare(`
+    SELECT
+      a.id,
+      a.alert_type as alertType,
+      a.title,
+      a.description,
+      a.created_at as createdAt,
+      r.url,
+      r.name,
+      r.category
+    FROM geo_reference_alerts a
+    JOIN geo_references r ON a.reference_id = r.id
+    WHERE a.seen = 0
+    ORDER BY a.created_at DESC
+  `)
+  return stmt.all()
+}
+
+/**
+ * Get all GEO reference alerts (for history)
+ * @param {number} limit - Max alerts to return
+ */
+export function getGeoReferenceAlertHistory(limit = 50) {
+  const db = getDb()
+  const stmt = db.prepare(`
+    SELECT
+      a.id,
+      a.alert_type as alertType,
+      a.title,
+      a.description,
+      a.seen,
+      a.created_at as createdAt,
+      r.url,
+      r.name,
+      r.category
+    FROM geo_reference_alerts a
+    JOIN geo_references r ON a.reference_id = r.id
+    ORDER BY a.created_at DESC
+    LIMIT ?
+  `)
+  return stmt.all(limit)
+}
+
+/**
+ * Mark GEO reference alerts as seen
+ * @param {number[]} ids - Alert IDs to mark as seen
+ */
+export function markGeoReferenceAlertsSeen(ids) {
+  const db = getDb()
+  const placeholders = ids.map(() => '?').join(',')
+  const stmt = db.prepare(`UPDATE geo_reference_alerts SET seen = 1 WHERE id IN (${placeholders})`)
+  return stmt.run(...ids)
 }

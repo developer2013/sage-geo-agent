@@ -152,6 +152,21 @@ Du erhältst einen Screenshot der kompletten Webseite und/oder einzelne Bilder. 
 - Tabellen ohne Überschriften: -3
 - Wichtige Daten nur als Bild-Tabelle: -8
 
+## WICHTIG: Erkläre das "Warum" bei jeder Bewertung!
+
+Bei jeder Weakness und Recommendation MUSST du erklären, WARUM das für GEO/KI-Sichtbarkeit relevant ist.
+
+### Beispiele für gute Erklärungen:
+
+❌ SCHLECHT: "Kein Direct Answer vorhanden"
+✅ GUT: "Kein Direct Answer in ersten 40 Worten → KI-Systeme wie ChatGPT und Perplexity extrahieren bevorzugt die ersten Sätze einer Seite für ihre Antworten. Ohne prägnante Zusammenfassung am Anfang wird der Content seltener zitiert."
+
+❌ SCHLECHT: "Bilder haben keine Alt-Texte"
+✅ GUT: "3 Bilder ohne Alt-Text → KI-Crawler können Bildinhalte nicht verstehen. Wenn wichtige Informationen (z.B. Statistiken in Infografiken) nur visuell verfügbar sind, gehen diese für RAG-Systeme verloren."
+
+❌ SCHLECHT: "noindex Meta-Tag gefunden"
+✅ GUT: "noindex Meta-Tag blockiert Indexierung → KRITISCH: Die Seite wird von Suchmaschinen nicht indexiert. Da ChatGPT, Perplexity und Google AI Overviews ihre Daten aus Suchindizes beziehen, ist diese Seite für KI-Antworten unsichtbar."
+
 ## ANTWORTFORMAT (STRIKT JSON!)
 
 Gib NUR dieses JSON zurück, KEIN anderer Text:
@@ -160,16 +175,16 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
   "geoScore": <0-100>,
   "scoreSummary": "<1-2 Sätze Begründung>",
   "strengths": [
-    {"title": "<Stärke>", "description": "<Erklärung mit GEO-Bezug>"}
+    {"title": "<Stärke>", "description": "<Erklärung mit GEO-Bezug UND warum das für KI-Sichtbarkeit hilft>"}
   ],
   "weaknesses": [
-    {"priority": "KRITISCH|MITTEL|NIEDRIG", "title": "<Problem>", "description": "<Auswirkung auf KI-Sichtbarkeit>"}
+    {"priority": "KRITISCH|MITTEL|NIEDRIG", "title": "<Problem>", "description": "<Auswirkung auf KI-Sichtbarkeit MIT Erklärung warum>"}
   ],
   "recommendations": [
     {
       "timeframe": "SOFORT|KURZFRISTIG|MITTELFRISTIG",
       "action": "<Konkrete Maßnahme>",
-      "reason": "<Begründung mit Fakten>",
+      "reason": "<Begründung mit Fakten UND warum das für KI wichtig ist>",
       "impact": {
         "level": "HOCH|MITTEL|NIEDRIG",
         "percentage": "<z.B. '+30-40%' oder '+5-10%' oder 'Variabel'>",
@@ -181,8 +196,8 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
   "imageAnalysis": {
     "hasVisualContent": <true|false>,
     "textInImages": "<Erkannter Text aus Bildern/Grafiken>",
-    "accessibilityIssues": ["<Liste von Accessibility-Problemen>"],
-    "recommendations": ["<Bild-spezifische Empfehlungen>"]
+    "accessibilityIssues": ["<Liste von Accessibility-Problemen MIT Erklärung warum problematisch für KI>"],
+    "recommendations": ["<Bild-spezifische Empfehlungen MIT GEO-Begründung>"]
   },
   "ctaAnalysis": {
     "primaryCta": "<Text des Haupt-CTAs oder null>",
@@ -232,6 +247,8 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
 - "Aktualisiert am" Datum vorhanden (+2)
 
 ## Negative Faktoren (Abzüge)
+- **noindex Meta-Tag vorhanden: -30 (KRITISCH!)** - Seite wird nicht indexiert, KI kann nicht darauf zugreifen
+- **nofollow Meta-Tag vorhanden: -10** - Links werden nicht verfolgt, schwächt Autorität
 - Keine H1 oder mehrere H1: -10
 - Heading-Ebenen übersprungen (H1→H3): -5
 - Kein Schema Markup: -15
@@ -294,15 +311,18 @@ export async function analyzeWithClaude(url, pageContent, pageCode, imageSetting
     `${h.level.toUpperCase()}: "${h.text}"${h.isQuestion ? ' [FRAGE]' : ''}`
   ).join('\n')
 
-  // Check robots.txt for AI crawlers
+  // Check robots.txt for AI crawlers using proper block parsing
   const aiCrawlers = ['GPTBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-Web', 'PerplexityBot', 'Google-Extended', 'Amazonbot', 'cohere-ai']
   const blockedCrawlers = []
   const allowedCrawlers = []
 
   if (pageCode.robotsTxt) {
+    // Parse robots.txt into User-Agent blocks
+    const robotsBlocks = parseRobotsTxt(pageCode.robotsTxt)
+
     aiCrawlers.forEach(crawler => {
-      const regex = new RegExp(`User-agent:\\s*${crawler}[\\s\\S]*?Disallow:\\s*/`, 'i')
-      if (regex.test(pageCode.robotsTxt)) {
+      const isBlocked = isCrawlerBlocked(crawler, robotsBlocks)
+      if (isBlocked) {
         blockedCrawlers.push(crawler)
       } else {
         allowedCrawlers.push(crawler)
@@ -398,6 +418,8 @@ ${pageCode.robotsTxt ? pageCode.robotsTxt.substring(0, 800) : 'Keine robots.txt 
 **KI-Crawler Status:**
 - Blockiert: ${blockedCrawlers.length > 0 ? blockedCrawlers.join(', ') : 'Keine'}
 - Erlaubt/Nicht blockiert: ${allowedCrawlers.length > 0 ? allowedCrawlers.join(', ') : 'Keine Angabe'}
+
+**Meta Robots Directives:** ${pageCode.robotsMeta ? formatRobotsMeta(pageCode.robotsMeta) : 'Keine gefunden'}
 
 ${imageAnalysisSection}
 
@@ -609,4 +631,145 @@ FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
 
     throw new Error('Could not parse AI response as JSON')
   }
+}
+
+/**
+ * Parse robots.txt into structured User-Agent blocks
+ * Each block contains the user-agent(s) and their associated rules
+ * @param {string} robotsTxt - Raw robots.txt content
+ * @returns {Array} Array of blocks: { agents: string[], rules: { type: 'allow'|'disallow', path: string }[] }
+ */
+function parseRobotsTxt(robotsTxt) {
+  const blocks = []
+  let currentBlock = null
+
+  const lines = robotsTxt.split('\n')
+
+  for (let line of lines) {
+    // Remove comments and trim
+    const commentIndex = line.indexOf('#')
+    if (commentIndex !== -1) {
+      line = line.substring(0, commentIndex)
+    }
+    line = line.trim()
+
+    if (!line) continue
+
+    // Parse directive
+    const colonIndex = line.indexOf(':')
+    if (colonIndex === -1) continue
+
+    const directive = line.substring(0, colonIndex).trim().toLowerCase()
+    const value = line.substring(colonIndex + 1).trim()
+
+    if (directive === 'user-agent') {
+      // Start new block or add to current multi-agent block
+      if (!currentBlock || currentBlock.rules.length > 0) {
+        // Start a new block
+        currentBlock = { agents: [value.toLowerCase()], rules: [] }
+        blocks.push(currentBlock)
+      } else {
+        // Add another agent to current block (multi-agent block)
+        currentBlock.agents.push(value.toLowerCase())
+      }
+    } else if (directive === 'disallow' && currentBlock) {
+      currentBlock.rules.push({ type: 'disallow', path: value || '' })
+    } else if (directive === 'allow' && currentBlock) {
+      currentBlock.rules.push({ type: 'allow', path: value || '' })
+    }
+    // Ignore other directives (Sitemap, Crawl-delay, etc.)
+  }
+
+  return blocks
+}
+
+/**
+ * Check if a crawler is blocked by the robots.txt rules
+ * @param {string} crawler - Crawler name (e.g., 'GPTBot')
+ * @param {Array} blocks - Parsed robots.txt blocks
+ * @returns {boolean} True if crawler is blocked from root path
+ */
+function isCrawlerBlocked(crawler, blocks) {
+  const crawlerLower = crawler.toLowerCase()
+
+  // Find the most specific matching block
+  // Priority: exact match > wildcard (*)
+  let matchingBlock = null
+
+  for (const block of blocks) {
+    for (const agent of block.agents) {
+      if (agent === crawlerLower) {
+        // Exact match - highest priority
+        matchingBlock = block
+        break
+      }
+    }
+    if (matchingBlock) break
+  }
+
+  // If no exact match, fall back to wildcard
+  if (!matchingBlock) {
+    for (const block of blocks) {
+      if (block.agents.includes('*')) {
+        matchingBlock = block
+        break
+      }
+    }
+  }
+
+  // No matching block means no restrictions
+  if (!matchingBlock) return false
+
+  // Check if root path "/" is blocked
+  // Rules are processed in order, with more specific paths taking precedence
+  // For simplicity, we check if there's a "Disallow: /" without a corresponding "Allow: /"
+  let isRootBlocked = false
+
+  for (const rule of matchingBlock.rules) {
+    // Empty disallow means allow all
+    if (rule.type === 'disallow' && rule.path === '') {
+      continue
+    }
+
+    // Check if rule applies to root
+    if (rule.path === '/' || rule.path === '/*') {
+      if (rule.type === 'disallow') {
+        isRootBlocked = true
+      } else if (rule.type === 'allow') {
+        isRootBlocked = false
+      }
+    }
+  }
+
+  return isRootBlocked
+}
+
+/**
+ * Format robots meta information for display in AI prompt
+ * @param {Object} robotsMeta - Extracted robots meta data
+ * @returns {string} Formatted string for AI analysis
+ */
+function formatRobotsMeta(robotsMeta) {
+  if (!robotsMeta || (!robotsMeta.hasNoindex && !robotsMeta.hasNofollow && robotsMeta.directives.length === 0)) {
+    return 'Keine Einschränkungen (index, follow)'
+  }
+
+  const warnings = []
+
+  if (robotsMeta.hasNoindex) {
+    warnings.push('⚠️ NOINDEX - Seite wird NICHT indexiert!')
+  }
+
+  if (robotsMeta.hasNofollow) {
+    warnings.push('⚠️ NOFOLLOW - Links werden nicht verfolgt')
+  }
+
+  if (robotsMeta.hasNone) {
+    warnings.push('⚠️ NONE = noindex + nofollow')
+  }
+
+  // Show raw tags for context
+  const tagsInfo = robotsMeta.rawTags.map(t => `${t.name}: "${t.content}"`).join(', ')
+
+  return `${warnings.join(' | ')} (Tags: ${tagsInfo})`
 }

@@ -414,15 +414,171 @@ export function analyzeSerpFactors(title, description, url, schemaMarkup) {
 
   const clickWorthinessScore = calculateWeightedScore(metrics)
 
+  // Analyze price schema separately (not part of main score)
+  const priceSchema = analyzePriceSchema(schemaMarkup)
+
   return {
     clickWorthinessScore,
     metrics,
     attentionTriggers: findAttentionTriggers(title, description),
     serpPreview: generateSerpPreview(title, description, url),
-    recommendations: generateSerpRecommendations(metrics)
+    recommendations: generateSerpRecommendations(metrics),
+    priceSchema
   }
 }
 
+/**
+ * Analyze Product/Offer schema for price information
+ * @param {object[]} schemaMarkup - JSON-LD schema objects
+ * @returns {object} Price schema analysis
+ */
+function analyzePriceSchema(schemaMarkup) {
+  const result = {
+    hasProductSchema: false,
+    hasOfferSchema: false,
+    hasPriceInfo: false,
+    hasValidCurrency: false,
+    priceType: null, // 'single', 'range', 'aggregate'
+    prices: [],
+    currency: null,
+    availability: null,
+    issues: [],
+    suggestions: []
+  }
+
+  if (!schemaMarkup || !Array.isArray(schemaMarkup)) {
+    return result
+  }
+
+  // Helper to recursively find schemas by type
+  function findSchemasByType(obj, types, found = []) {
+    if (!obj || typeof obj !== 'object') return found
+
+    const objType = obj['@type']
+    const typeMatches = types.some(t => {
+      if (Array.isArray(objType)) return objType.includes(t)
+      return objType === t
+    })
+
+    if (typeMatches) {
+      found.push(obj)
+    }
+
+    // Check nested objects
+    for (const key of Object.keys(obj)) {
+      if (key !== '@type' && typeof obj[key] === 'object') {
+        if (Array.isArray(obj[key])) {
+          obj[key].forEach(item => findSchemasByType(item, types, found))
+        } else {
+          findSchemasByType(obj[key], types, found)
+        }
+      }
+    }
+
+    return found
+  }
+
+  // Find all Product schemas
+  const products = findSchemasByType(schemaMarkup, ['Product'])
+  if (products.length > 0) {
+    result.hasProductSchema = true
+  }
+
+  // Find all Offer and AggregateOffer schemas
+  const offers = findSchemasByType(schemaMarkup, ['Offer', 'AggregateOffer'])
+  if (offers.length > 0) {
+    result.hasOfferSchema = true
+  }
+
+  // Also check for offers nested in products
+  products.forEach(product => {
+    if (product.offers) {
+      const productOffers = Array.isArray(product.offers) ? product.offers : [product.offers]
+      productOffers.forEach(offer => {
+        if (!offers.includes(offer)) {
+          offers.push(offer)
+          result.hasOfferSchema = true
+        }
+      })
+    }
+  })
+
+  // Analyze each offer for price information
+  offers.forEach(offer => {
+    const offerType = offer['@type']
+    const isAggregate = offerType === 'AggregateOffer' ||
+                       (Array.isArray(offerType) && offerType.includes('AggregateOffer'))
+
+    // Extract price info
+    const priceInfo = {
+      type: isAggregate ? 'aggregate' : 'single',
+      price: offer.price,
+      lowPrice: offer.lowPrice,
+      highPrice: offer.highPrice,
+      currency: offer.priceCurrency,
+      availability: offer.availability
+    }
+
+    // Validate price presence
+    if (isAggregate) {
+      if (offer.lowPrice || offer.highPrice) {
+        result.hasPriceInfo = true
+        result.priceType = 'range'
+        if (offer.lowPrice && offer.highPrice) {
+          result.prices.push(`${offer.lowPrice} - ${offer.highPrice}`)
+        } else {
+          result.prices.push(offer.lowPrice || offer.highPrice)
+        }
+      }
+    } else {
+      if (offer.price) {
+        result.hasPriceInfo = true
+        result.priceType = result.priceType || 'single'
+        result.prices.push(offer.price)
+      }
+    }
+
+    // Validate currency
+    if (offer.priceCurrency) {
+      result.currency = offer.priceCurrency
+      // Check if valid ISO 4217 currency code (3 uppercase letters)
+      if (/^[A-Z]{3}$/.test(offer.priceCurrency)) {
+        result.hasValidCurrency = true
+      } else {
+        result.issues.push(`Ungueltige Waehrung: "${offer.priceCurrency}" (sollte ISO 4217 sein, z.B. EUR, USD)`)
+      }
+    }
+
+    // Check availability
+    if (offer.availability) {
+      result.availability = offer.availability
+    }
+  })
+
+  // Generate suggestions
+  if (result.hasProductSchema && !result.hasOfferSchema) {
+    result.issues.push('Product Schema ohne Offer - keine Preisinformationen')
+    result.suggestions.push('Offer Schema mit Preis zu Product hinzufuegen fuer Rich Results')
+  }
+
+  if (result.hasOfferSchema && !result.hasPriceInfo) {
+    result.issues.push('Offer Schema ohne Preis')
+    result.suggestions.push('price oder lowPrice/highPrice zum Offer hinzufuegen')
+  }
+
+  if (result.hasPriceInfo && !result.hasValidCurrency) {
+    result.issues.push('Preis ohne gueltige Waehrung')
+    result.suggestions.push('priceCurrency im ISO 4217 Format hinzufuegen (z.B. "EUR", "USD")')
+  }
+
+  if (result.hasOfferSchema && !result.availability) {
+    result.suggestions.push('availability zum Offer hinzufuegen (z.B. "https://schema.org/InStock")')
+  }
+
+  return result
+}
+
 export default {
-  analyzeSerpFactors
+  analyzeSerpFactors,
+  analyzePriceSchema
 }

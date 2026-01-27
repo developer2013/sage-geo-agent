@@ -10,7 +10,9 @@ import feedbackRouter from './routes/feedback.js'
 import compareRouter from './routes/compare.js'
 import monitorRouter from './routes/monitor.js'
 import brandRouter from './routes/brand.js'
+import referencesRouter from './routes/references.js'
 import { initDatabase } from './services/dbService.js'
+import { startScheduler } from './services/schedulerService.js'
 
 dotenv.config({ path: '../.env' })
 
@@ -35,6 +37,7 @@ app.use('/api/feedback', feedbackRouter)
 app.use('/api/compare', compareRouter)
 app.use('/api/monitor', monitorRouter)
 app.use('/api/brand', brandRouter)
+app.use('/api/references', referencesRouter)
 
 // Health check (must be before catch-all)
 app.get('/api/health', (req, res) => {
@@ -52,4 +55,7 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+
+  // Start the GEO reference scheduler (checks external sources periodically)
+  startScheduler()
 })

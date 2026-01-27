@@ -74,6 +74,9 @@ async function fetchPageContentFallback(url) {
     }
   })
 
+  // Extract robots meta directives (noindex, nofollow)
+  const robotsMeta = extractRobotsMeta($)
+
   const schemaMarkup = []
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
@@ -107,6 +110,7 @@ async function fetchPageContentFallback(url) {
     metaTags,
     schemaMarkup,
     robotsTxt,
+    robotsMeta,
     screenshot: null,
     images: []
   }
@@ -162,6 +166,9 @@ export async function fetchPageContent(url) {
       }
     })
 
+    // Extract robots meta directives (noindex, nofollow)
+    const robotsMeta = extractRobotsMeta($)
+
     // Extract and fetch images for analysis
     const imageUrls = extractImageUrls(firecrawlResult.html, url)
     console.log(`[Scraper] Found ${imageUrls.length} images on page`)
@@ -182,6 +189,7 @@ export async function fetchPageContent(url) {
       metaTags,
       schemaMarkup,
       robotsTxt,
+      robotsMeta,
       screenshot: firecrawlResult.screenshot,
       images,
       metadata: firecrawlResult.metadata,
@@ -205,6 +213,20 @@ export function extractTextContent(html) {
 
   // Remove scripts, styles, and other non-content elements
   $('script, style, noscript, iframe, svg').remove()
+
+  // Remove hidden/invisible elements before heading analysis (FIX: H1 false-positive)
+  // This prevents counting H1s that are:
+  // - Inside <template> tags (JS framework templates)
+  // - Hidden via inline styles (display:none, visibility:hidden)
+  // - Hidden via common CSS classes (.hidden, .sr-only, .visually-hidden)
+  // - Hidden via HTML attributes ([hidden])
+  $('template').remove()
+  $('[style*="display: none"], [style*="display:none"]').remove()
+  $('[style*="visibility: hidden"], [style*="visibility:hidden"]').remove()
+  $('[hidden]').remove()
+  $('.hidden, .sr-only, .visually-hidden, .screen-reader-only, .offscreen').remove()
+  // Also remove elements with aria-hidden="true" that contain headings
+  $('[aria-hidden="true"]').remove()
 
   // Get the main content
   const title = $('title').text().trim()
@@ -394,4 +416,55 @@ export function extractTextContent(html) {
     dateInfo,
     structureAnalysis
   }
+}
+
+/**
+ * Extract robots meta directives from HTML
+ * Checks both generic "robots" and specific bot meta tags (googlebot, bingbot)
+ * @param {CheerioAPI} $ - Cheerio instance
+ * @returns {Object} Robots meta information
+ */
+function extractRobotsMeta($) {
+  const result = {
+    hasNoindex: false,
+    hasNofollow: false,
+    hasNone: false, // "none" = noindex + nofollow
+    directives: [],
+    rawTags: []
+  }
+
+  // Bot-specific meta names to check
+  const robotsMetaNames = ['robots', 'googlebot', 'bingbot', 'googlebot-news']
+
+  robotsMetaNames.forEach(metaName => {
+    const content = $(`meta[name="${metaName}" i]`).attr('content')
+    if (content) {
+      const lowerContent = content.toLowerCase()
+      result.rawTags.push({ name: metaName, content })
+
+      // Parse directives
+      const directives = lowerContent.split(',').map(d => d.trim())
+
+      directives.forEach(directive => {
+        if (!result.directives.includes(directive)) {
+          result.directives.push(directive)
+        }
+
+        if (directive === 'noindex') {
+          result.hasNoindex = true
+        } else if (directive === 'nofollow') {
+          result.hasNofollow = true
+        } else if (directive === 'none') {
+          result.hasNone = true
+          result.hasNoindex = true
+          result.hasNofollow = true
+        }
+      })
+    }
+  })
+
+  // Also check X-Robots-Tag in HTTP headers (would need to be passed separately)
+  // For now, we only check meta tags
+
+  return result
 }
