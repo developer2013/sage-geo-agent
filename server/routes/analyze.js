@@ -184,9 +184,10 @@ function calculateContentStats(html, baseUrl, headingVisibility = null) {
     }
   }
 
-  // Count lists and tables
-  const listCount = $('ul, ol').length
-  const tableCount = $('table').length
+  // Count lists and tables - only in main content area (consistent with word count)
+  const contentArea = mainContent.length > 0 ? mainContent : $('body')
+  const listCount = contentArea.find('ul, ol').length
+  const tableCount = contentArea.find('table').length
 
   // Estimate read time (average 200 words per minute)
   const estimatedReadTime = Math.max(1, Math.ceil(wordCount / 200))
