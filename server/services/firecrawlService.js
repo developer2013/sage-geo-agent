@@ -208,29 +208,34 @@ export async function scrapeWithFirecrawl(url) {
 }
 
 /**
- * Fetch robots.txt from a URL
+ * Fetch robots.txt from a URL using direct HTTP fetch
+ * Uses plain HTTP instead of Firecrawl scrape since robots.txt is a simple text file
  */
 export async function getRobotsTxt(url) {
-  const client = getFirecrawlClient()
-  if (!client) {
-    return null
-  }
-
   try {
     const urlObj = new URL(url)
     const robotsUrl = `${urlObj.protocol}//${urlObj.host}/robots.txt`
 
     logRequest('Firecrawl', 'FETCH', 'robots.txt')
 
-    const result = await client.scrape(robotsUrl, {
-      formats: ['markdown'],
-      onlyMainContent: false,
+    const response = await fetch(robotsUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/plain,*/*',
+      },
     })
 
-    if (result.success && result.markdown) {
-      return result.markdown
+    if (response.ok) {
+      const text = await response.text()
+      // Verify it looks like a robots.txt (not an HTML error page)
+      if (text && !text.trim().startsWith('<!DOCTYPE') && !text.trim().startsWith('<html')) {
+        return text
+      }
+      logWarning('Firecrawl', 'robots.txt returned HTML instead of text')
+      return null
     }
 
+    logWarning('Firecrawl', `robots.txt HTTP ${response.status}`)
     return null
   } catch (error) {
     logWarning('Firecrawl', `robots.txt nicht verfügbar: ${error.message}`)

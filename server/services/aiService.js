@@ -11,9 +11,17 @@ import {
   formatSize
 } from '../utils/debugLogger.js'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+// Lazy initialization - ensures dotenv.config() has run before accessing API key
+let client = null
+
+function getAnthropicClient() {
+  if (!client) {
+    client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    })
+  }
+  return client
+}
 
 const SYSTEM_PROMPT = `# GEO Agent - Generative Engine Optimization Experte
 
@@ -411,7 +419,7 @@ TECHNISCHE ANALYSE
 ${pageCode.metaTags.slice(0, 15).map(t => `- ${t.name || t.property}: ${t.content?.substring(0, 80)}`).join('\n') || 'Keine Meta-Tags'}
 
 **Schema Markup (JSON-LD):**
-${pageCode.schemaMarkup.length > 0 ? JSON.stringify(pageCode.schemaMarkup, null, 2).substring(0, 2500) : 'KEIN SCHEMA MARKUP GEFUNDEN!'}
+${pageCode.schemaMarkup.length > 0 ? JSON.stringify(pageCode.schemaMarkup, null, 2).substring(0, 5000) : 'KEIN SCHEMA MARKUP GEFUNDEN!'}
 
 **robots.txt:**
 ${pageCode.robotsTxt ? pageCode.robotsTxt.substring(0, 800) : 'Keine robots.txt gefunden'}
@@ -599,10 +607,11 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
   // Calculate content sizes for logging
   const htmlLength = pageCode.html?.length || 0
 
-  // Log the request details
+  // Log the request details (include image settings for debugging)
   logRequest('Claude', 'ANALYZE', url, {
     'Model': 'claude-opus-4-5-20251101',
     'System': `${SYSTEM_PROMPT.length.toLocaleString()} chars`,
+    'Image-Settings': `screenshot=${settings.includeScreenshot}, images=${settings.includeImages}, max=${settings.maxImages}`,
     'Images': `${totalImages} (${screenshotIncluded ? '1 screenshot' : 'kein screenshot'}${pageImagesIncluded > 0 ? ` + ${pageImagesIncluded} page` : ''})`,
     'HTML': formatSize(htmlLength)
   })
@@ -635,7 +644,7 @@ FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
 
   let message
   try {
-    message = await client.messages.create({
+    message = await getAnthropicClient().messages.create({
       model: 'claude-opus-4-5-20251101',
       max_tokens: 8192,
       messages: [
