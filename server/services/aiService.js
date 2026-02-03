@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import sharp from 'sharp'
 import { extractTextContent } from './scraperService.js'
 import {
   logRequest,
@@ -500,6 +501,38 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
     return normalized
   }
 
+  // Resize image if dimensions exceed Claude API limit (8000px)
+  const MAX_DIMENSION = 7680
+  async function resizeIfNeeded(base64Data, mediaType) {
+    try {
+      const buffer = Buffer.from(base64Data, 'base64')
+      const metadata = await sharp(buffer).metadata()
+
+      if (!metadata.width || !metadata.height) return { data: base64Data, mediaType }
+
+      if (metadata.width <= MAX_DIMENSION && metadata.height <= MAX_DIMENSION) {
+        return { data: base64Data, mediaType }
+      }
+
+      logWarning('Claude', `Bild zu groß (${metadata.width}x${metadata.height}), wird auf max ${MAX_DIMENSION}px verkleinert`)
+
+      const resized = await sharp(buffer)
+        .resize({
+          width: metadata.width > MAX_DIMENSION ? MAX_DIMENSION : undefined,
+          height: metadata.height > MAX_DIMENSION ? MAX_DIMENSION : undefined,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 85 })
+        .toBuffer()
+
+      return { data: resized.toString('base64'), mediaType: 'image/jpeg' }
+    } catch (err) {
+      logWarning('Claude', `Bild-Resize fehlgeschlagen, wird übersprungen: ${err.message}`)
+      return null
+    }
+  }
+
   // Build message content array
   const messageContent = []
 
@@ -510,15 +543,20 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
     const screenshotMediaType = normalizeMediaType(getMediaType(pageCode.screenshot))
 
     if (cleanedScreenshot && isValidMediaType(screenshotMediaType)) {
-      messageContent.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: screenshotMediaType,
-          data: cleanedScreenshot,
-        },
-      })
-      screenshotIncluded = true
+      const resized = await resizeIfNeeded(cleanedScreenshot, screenshotMediaType)
+      if (resized) {
+        messageContent.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: resized.mediaType,
+            data: resized.data,
+          },
+        })
+        screenshotIncluded = true
+      } else {
+        logWarning('Claude', 'Screenshot übersprungen - Resize fehlgeschlagen')
+      }
     } else {
       logWarning('Claude', `Screenshot übersprungen - ungültiges Format: ${screenshotMediaType}`)
     }
@@ -532,15 +570,18 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
       const normalizedType = normalizeMediaType(img.mediaType)
 
       if (cleanedData && isValidMediaType(normalizedType)) {
-        messageContent.push({
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: normalizedType,
-            data: cleanedData,
-          },
-        })
-        pageImagesIncluded++
+        const resized = await resizeIfNeeded(cleanedData, normalizedType)
+        if (resized) {
+          messageContent.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: resized.mediaType,
+              data: resized.data,
+            },
+          })
+          pageImagesIncluded++
+        }
       }
     }
   }
