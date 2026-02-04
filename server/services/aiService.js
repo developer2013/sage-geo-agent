@@ -613,7 +613,7 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
   // Log the request details (include image settings for debugging)
   logRequest('Claude', 'ANALYZE', url, {
     'Model': 'claude-opus-4-5-20251101',
-    'System': `${SYSTEM_PROMPT.length.toLocaleString()} chars`,
+    'System': `${(lang === 'en' ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_DE).length.toLocaleString()} chars`,
     'Image-Settings': `screenshot=${settings.includeScreenshot}, images=${settings.includeImages}, max=${settings.maxImages}`,
     'Images': `${totalImages} (${screenshotIncluded ? '1 screenshot' : 'kein screenshot'}${pageImagesIncluded > 0 ? ` + ${pageImagesIncluded} page` : ''})`,
     'HTML': formatSize(htmlLength)
