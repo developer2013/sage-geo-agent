@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { SerpPreviewCard } from './SerpPreviewCard'
 import { ClickWorthinessScore } from './ClickWorthinessScore'
 import { AttentionTriggersChecklist } from './AttentionTriggersChecklist'
@@ -11,6 +12,7 @@ interface SerpTabProps {
 }
 
 export function SerpTab({ serpAnalysis }: SerpTabProps) {
+  const { t } = useTranslation()
   const { recommendations } = serpAnalysis
 
   const getPriorityColor = (priority: string) => {
@@ -58,7 +60,7 @@ export function SerpTab({ serpAnalysis }: SerpTabProps) {
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-4">
               <Lightbulb className="h-5 w-5 text-amber-500" />
-              <h3 className="font-semibold">SERP Optimierungen</h3>
+              <h3 className="font-semibold">{t('serp.optimizations')}</h3>
             </div>
             <div className="space-y-3">
               {recommendations.map((rec, index) => (
@@ -94,11 +96,9 @@ export function SerpTab({ serpAnalysis }: SerpTabProps) {
       <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30 text-sm">
         <AlertCircle className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
         <div className="text-muted-foreground">
-          <p className="font-medium text-foreground mb-1">Was ist Click-Worthiness?</p>
+          <p className="font-medium text-foreground mb-1">{t('serp.clickWorthinessInfo')}</p>
           <p>
-            Der Click-Worthiness Score misst, wie wahrscheinlich Nutzer auf Ihr Suchergebnis klicken.
-            Er basiert auf Best Practices fuer Title Tags, Meta Descriptions und psychologischen Triggern,
-            die in B2B-Suchanfragen nachweislich zu hoeheren Klickraten fuehren.
+            {t('serp.clickWorthinessDescription')}
           </p>
         </div>
       </div>

@@ -21,12 +21,12 @@ router.post('/', async (req, res) => {
 
     // Validate input
     if (!recommendationType || typeof recommendationType !== 'string') {
-      return res.status(400).json({ error: 'recommendationType ist erforderlich' })
+      return res.status(400).json({ error: 'FEEDBACK_SAVE_FAILED' })
     }
 
     if (!['helpful', 'implemented', 'dismissed'].includes(action)) {
       return res.status(400).json({
-        error: 'Ungueltige Aktion. Erlaubt: helpful, implemented, dismissed'
+        error: 'FEEDBACK_SAVE_FAILED'
       })
     }
 
@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
     res.json({ success: true })
   } catch (error) {
     console.error('[Feedback] Error:', error.message)
-    res.status(500).json({ error: 'Feedback konnte nicht gespeichert werden' })
+    res.status(500).json({ error: 'FEEDBACK_SAVE_FAILED' })
   }
 })
 
@@ -56,7 +56,7 @@ router.post('/shown', async (req, res) => {
     const { recommendationType } = req.body
 
     if (!recommendationType || typeof recommendationType !== 'string') {
-      return res.status(400).json({ error: 'recommendationType ist erforderlich' })
+      return res.status(400).json({ error: 'FEEDBACK_SAVE_FAILED' })
     }
 
     const normalizedType = recommendationType.toLowerCase().trim()
@@ -65,7 +65,7 @@ router.post('/shown', async (req, res) => {
     res.json({ success: true })
   } catch (error) {
     console.error('[Feedback] Error recording shown:', error.message)
-    res.status(500).json({ error: 'Konnte nicht aufzeichnen' })
+    res.status(500).json({ error: 'FEEDBACK_SAVE_FAILED' })
   }
 })
 
@@ -99,7 +99,7 @@ router.get('/stats', async (req, res) => {
     })
   } catch (error) {
     console.error('[Feedback] Error getting stats:', error.message)
-    res.status(500).json({ error: 'Statistiken konnten nicht geladen werden' })
+    res.status(500).json({ error: 'FEEDBACK_SAVE_FAILED' })
   }
 })
 

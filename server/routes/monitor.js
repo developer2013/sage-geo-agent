@@ -18,7 +18,7 @@ router.get('/urls', (req, res) => {
     res.json({ urls })
   } catch (error) {
     console.error('Error fetching monitored URLs:', error)
-    res.status(500).json({ error: 'Konnte ueberwachte URLs nicht laden' })
+    res.status(500).json({ error: 'MONITOR_LOAD_FAILED' })
   }
 })
 
@@ -28,7 +28,7 @@ router.post('/urls', (req, res) => {
     const { url, name, alertThreshold } = req.body
 
     if (!url) {
-      return res.status(400).json({ error: 'URL ist erforderlich' })
+      return res.status(400).json({ error: 'URL_REQUIRED' })
     }
 
     const result = addMonitoredUrl(url, name, alertThreshold || 5)
@@ -40,7 +40,7 @@ router.post('/urls', (req, res) => {
     res.json({ success: true, id: result.id })
   } catch (error) {
     console.error('Error adding monitored URL:', error)
-    res.status(500).json({ error: 'Konnte URL nicht hinzufuegen' })
+    res.status(500).json({ error: 'MONITOR_LOAD_FAILED' })
   }
 })
 
@@ -51,13 +51,13 @@ router.delete('/urls/:id', (req, res) => {
     const deleted = removeMonitoredUrl(parseInt(id))
 
     if (!deleted) {
-      return res.status(404).json({ error: 'URL nicht gefunden' })
+      return res.status(404).json({ error: 'MONITOR_LOAD_FAILED' })
     }
 
     res.json({ success: true })
   } catch (error) {
     console.error('Error removing monitored URL:', error)
-    res.status(500).json({ error: 'Konnte URL nicht entfernen' })
+    res.status(500).json({ error: 'MONITOR_LOAD_FAILED' })
   }
 })
 
@@ -71,7 +71,7 @@ router.patch('/urls/:id/toggle', (req, res) => {
     res.json({ success: true })
   } catch (error) {
     console.error('Error toggling monitored URL:', error)
-    res.status(500).json({ error: 'Konnte Status nicht aendern' })
+    res.status(500).json({ error: 'MONITOR_LOAD_FAILED' })
   }
 })
 
@@ -82,7 +82,7 @@ router.get('/alerts/unseen', (req, res) => {
     res.json({ alerts, count: alerts.length })
   } catch (error) {
     console.error('Error fetching unseen alerts:', error)
-    res.status(500).json({ error: 'Konnte Alerts nicht laden' })
+    res.status(500).json({ error: 'MONITOR_LOAD_FAILED' })
   }
 })
 
@@ -94,7 +94,7 @@ router.get('/alerts', (req, res) => {
     res.json({ alerts })
   } catch (error) {
     console.error('Error fetching alert history:', error)
-    res.status(500).json({ error: 'Konnte Alert-Historie nicht laden' })
+    res.status(500).json({ error: 'MONITOR_LOAD_FAILED' })
   }
 })
 
@@ -104,14 +104,14 @@ router.post('/alerts/seen', (req, res) => {
     const { ids } = req.body
 
     if (!ids || !Array.isArray(ids)) {
-      return res.status(400).json({ error: 'Alert-IDs sind erforderlich' })
+      return res.status(400).json({ error: 'MONITOR_LOAD_FAILED' })
     }
 
     markAlertsSeen(ids)
     res.json({ success: true })
   } catch (error) {
     console.error('Error marking alerts as seen:', error)
-    res.status(500).json({ error: 'Konnte Alerts nicht aktualisieren' })
+    res.status(500).json({ error: 'MONITOR_LOAD_FAILED' })
   }
 })
 

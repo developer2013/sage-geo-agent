@@ -29,7 +29,7 @@ router.get('/', (req, res) => {
     res.json({ references })
   } catch (error) {
     console.error('Error fetching GEO references:', error)
-    res.status(500).json({ error: 'Konnte GEO-Referenzen nicht laden' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -40,7 +40,7 @@ router.get('/recommended', (req, res) => {
     res.json({ recommended })
   } catch (error) {
     console.error('Error fetching recommended references:', error)
-    res.status(500).json({ error: 'Konnte Empfehlungen nicht laden' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -50,7 +50,7 @@ router.post('/', (req, res) => {
     const { url, name, category, description, checkIntervalHours, notes } = req.body
 
     if (!url || !name || !category) {
-      return res.status(400).json({ error: 'URL, Name und Kategorie sind erforderlich' })
+      return res.status(400).json({ error: 'REFERENCES_LOAD_FAILED' })
     }
 
     const result = addGeoReference({
@@ -69,7 +69,7 @@ router.post('/', (req, res) => {
     res.json({ success: true, id: result.id })
   } catch (error) {
     console.error('Error adding GEO reference:', error)
-    res.status(500).json({ error: 'Konnte GEO-Referenz nicht hinzufuegen' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -80,13 +80,13 @@ router.delete('/:id', (req, res) => {
     const deleted = removeGeoReference(parseInt(id))
 
     if (!deleted) {
-      return res.status(404).json({ error: 'GEO-Referenz nicht gefunden' })
+      return res.status(404).json({ error: 'REFERENCES_LOAD_FAILED' })
     }
 
     res.json({ success: true })
   } catch (error) {
     console.error('Error removing GEO reference:', error)
-    res.status(500).json({ error: 'Konnte GEO-Referenz nicht entfernen' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -100,7 +100,7 @@ router.patch('/:id/toggle', (req, res) => {
     res.json({ success: true })
   } catch (error) {
     console.error('Error toggling GEO reference:', error)
-    res.status(500).json({ error: 'Konnte Status nicht aendern' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -111,7 +111,7 @@ router.get('/alerts/unseen', (req, res) => {
     res.json({ alerts, count: alerts.length })
   } catch (error) {
     console.error('Error fetching unseen GEO reference alerts:', error)
-    res.status(500).json({ error: 'Konnte Alerts nicht laden' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -123,7 +123,7 @@ router.get('/alerts', (req, res) => {
     res.json({ alerts })
   } catch (error) {
     console.error('Error fetching GEO reference alert history:', error)
-    res.status(500).json({ error: 'Konnte Alert-Historie nicht laden' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -133,14 +133,14 @@ router.post('/alerts/seen', (req, res) => {
     const { ids } = req.body
 
     if (!ids || !Array.isArray(ids)) {
-      return res.status(400).json({ error: 'Alert-IDs sind erforderlich' })
+      return res.status(400).json({ error: 'REFERENCES_LOAD_FAILED' })
     }
 
     markGeoReferenceAlertsSeen(ids)
     res.json({ success: true })
   } catch (error) {
     console.error('Error marking GEO reference alerts as seen:', error)
-    res.status(500).json({ error: 'Konnte Alerts nicht aktualisieren' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -151,7 +151,7 @@ router.get('/scheduler/status', (req, res) => {
     res.json(status)
   } catch (error) {
     console.error('Error getting scheduler status:', error)
-    res.status(500).json({ error: 'Konnte Scheduler-Status nicht laden' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 
@@ -162,7 +162,7 @@ router.post('/scheduler/check', async (req, res) => {
     res.json({ success: true, results })
   } catch (error) {
     console.error('Error triggering manual check:', error)
-    res.status(500).json({ error: 'Konnte Check nicht starten' })
+    res.status(500).json({ error: 'REFERENCES_LOAD_FAILED' })
   }
 })
 

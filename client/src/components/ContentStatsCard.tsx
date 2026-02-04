@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   FileText,
   Image,
@@ -16,46 +17,48 @@ interface ContentStatsCardProps {
 }
 
 export function ContentStatsCard({ stats }: ContentStatsCardProps) {
+  const { t, i18n } = useTranslation()
+
   const statItems = [
     {
       icon: FileText,
-      label: 'Woerter',
-      value: stats.wordCount.toLocaleString('de-DE')
+      label: t('stats.words'),
+      value: stats.wordCount.toLocaleString(i18n.language === 'en' ? 'en-US' : 'de-DE')
     },
     {
       icon: Clock,
-      label: 'Lesezeit',
-      value: `~${stats.estimatedReadTime} Min.`
+      label: t('stats.readTime'),
+      value: t('stats.readTimeValue', { minutes: stats.estimatedReadTime })
     },
     {
       icon: Image,
-      label: 'Bilder',
+      label: t('stats.images'),
       value: stats.imageCount.toString(),
-      subtext: `${stats.imagesWithAlt} mit Alt-Text`
+      subtext: t('stats.imagesWithAlt', { count: stats.imagesWithAlt })
     },
     {
       icon: Link2,
-      label: 'Interne Links',
+      label: t('stats.internalLinks'),
       value: stats.internalLinks.toString()
     },
     {
       icon: ExternalLink,
-      label: 'Externe Links',
+      label: t('stats.externalLinks'),
       value: stats.externalLinks.toString()
     },
     {
       icon: Heading,
-      label: 'Ueberschriften',
+      label: t('stats.headings'),
       value: Object.values(stats.headingStructure).reduce((a, b) => a + b, 0).toString()
     },
     {
       icon: List,
-      label: 'Listen',
+      label: t('stats.lists'),
       value: stats.listCount.toString()
     },
     {
       icon: Table,
-      label: 'Tabellen',
+      label: t('stats.tables'),
       value: stats.tableCount.toString()
     },
   ]
@@ -67,7 +70,7 @@ export function ContentStatsCard({ stats }: ContentStatsCardProps) {
           <div className="neu-icon p-2">
             <FileText className="h-4 w-4 text-primary" />
           </div>
-          Content-Statistiken
+          {t('stats.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -93,7 +96,7 @@ export function ContentStatsCard({ stats }: ContentStatsCardProps) {
         <div className="p-3 rounded-xl bg-background shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]">
           <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
             <Heading className="h-4 w-4 text-primary" />
-            Ueberschriften-Struktur
+            {t('stats.headingStructure')}
           </h4>
           <div className="flex gap-2">
             {Object.entries(stats.headingStructure).map(([level, count]) => (

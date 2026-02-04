@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { History, TrendingUp, TrendingDown, Minus, ArrowRight, Calendar, CheckCircle2, XCircle, Plus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -79,6 +80,7 @@ interface VersionHistoryProps {
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
+  const { t, i18n } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState<VersionHistoryResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -109,9 +111,9 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error('Keine früheren Analysen für diese URL gefunden')
+          throw new Error(t('version.noHistoryFound'))
         }
-        throw new Error('Fehler beim Laden der Historie')
+        throw new Error(t('version.loadError'))
       }
 
       const data = await response.json()
@@ -123,7 +125,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
         setOldVersionId(data.versions[1].id)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unbekannter Fehler')
+      setError(err instanceof Error ? err.message : t('common.unknown_error'))
     } finally {
       setLoading(false)
     }
@@ -137,13 +139,13 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
       const response = await fetch(`${API_BASE}/api/history/compare/${oldVersionId}/${newVersionId}`)
 
       if (!response.ok) {
-        throw new Error('Vergleich fehlgeschlagen')
+        throw new Error(t('version.comparisonFailed'))
       }
 
       const data = await response.json()
       setComparison(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Vergleich fehlgeschlagen')
+      setError(err instanceof Error ? err.message : t('version.comparisonFailed'))
     } finally {
       setCompareLoading(false)
     }
@@ -151,7 +153,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('de-DE', {
+    return date.toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'de-DE', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -174,12 +176,12 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
 
   const getTrendBadge = (change: number) => {
     if (change > 0) {
-      return <Badge className="bg-green-500 text-white">+{change} Punkte</Badge>
+      return <Badge className="bg-green-500 text-white">+{change} {t('common.points')}</Badge>
     }
     if (change < 0) {
-      return <Badge variant="destructive">{change} Punkte</Badge>
+      return <Badge variant="destructive">{change} {t('common.points')}</Badge>
     }
-    return <Badge variant="secondary">Unverändert</Badge>
+    return <Badge variant="secondary">{t('version.unchanged')}</Badge>
   }
 
   return (
@@ -188,7 +190,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            Versions-Historie
+            {t('version.title')}
           </DialogTitle>
           <DialogDescription className="truncate max-w-[500px]">
             {url}
@@ -212,12 +214,12 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
             {/* Trend Overview */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Score-Entwicklung</CardTitle>
+                <CardTitle className="text-lg">{t('version.scoreDevelopment')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-center">
-                    <div className="text-sm text-muted-foreground mb-1">Erste Analyse</div>
+                    <div className="text-sm text-muted-foreground mb-1">{t('version.firstAnalysis')}</div>
                     <div className={`text-2xl font-bold ${getScoreColor(history.trend.oldest)}`}>
                       {history.trend.oldest}
                     </div>
@@ -235,7 +237,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                   </div>
 
                   <div className="text-center">
-                    <div className="text-sm text-muted-foreground mb-1">Aktuelle Analyse</div>
+                    <div className="text-sm text-muted-foreground mb-1">{t('version.currentAnalysis')}</div>
                     <div className={`text-2xl font-bold ${getScoreColor(history.trend.latest)}`}>
                       {history.trend.latest}
                     </div>
@@ -246,21 +248,21 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                   {history.trend.improving ? (
                     <Badge className="bg-green-500 text-white">
                       <TrendingUp className="h-3 w-3 mr-1" />
-                      Positive Entwicklung
+                      {t('version.positiveTrend')}
                     </Badge>
                   ) : history.trend.totalChange < 0 ? (
                     <Badge variant="destructive">
                       <TrendingDown className="h-3 w-3 mr-1" />
-                      Negative Entwicklung
+                      {t('version.negativeTrend')}
                     </Badge>
                   ) : (
                     <Badge variant="secondary">
                       <Minus className="h-3 w-3 mr-1" />
-                      Stabil
+                      {t('version.stable')}
                     </Badge>
                   )}
                   <span className="text-sm text-muted-foreground ml-2">
-                    über {history.versionCount} Analysen
+                    {t('version.overAnalyses', { count: history.versionCount })}
                   </span>
                 </div>
               </CardContent>
@@ -270,14 +272,14 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Alle Versionen</CardTitle>
+                  <CardTitle className="text-lg">{t('version.allVersions')}</CardTitle>
                   {history.versions.length >= 2 && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCompareMode(!compareMode)}
                     >
-                      {compareMode ? 'Vergleich beenden' : 'Versionen vergleichen'}
+                      {compareMode ? t('version.endComparison') : t('version.compareVersions')}
                     </Button>
                   )}
                 </div>
@@ -308,9 +310,9 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                       </div>
                     </div>
                     <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                      <span>{version.strengths?.length || 0} Stärken</span>
-                      <span>{version.weaknesses?.length || 0} Schwächen</span>
-                      <span>{version.recommendations?.length || 0} Empfehlungen</span>
+                      <span>{version.strengths?.length || 0} {t('common.strengths')}</span>
+                      <span>{version.weaknesses?.length || 0} {t('common.weaknesses')}</span>
+                      <span>{version.recommendations?.length || 0} {t('common.recommendations')}</span>
                     </div>
                   </div>
                 ))}
@@ -321,15 +323,15 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
             {compareMode && history.versions.length >= 2 && (
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Versionen vergleichen</CardTitle>
+                  <CardTitle className="text-lg">{t('version.compareVersions')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Ältere Version</label>
+                      <label className="text-sm font-medium mb-2 block">{t('version.olderVersion')}</label>
                       <Select value={oldVersionId} onValueChange={setOldVersionId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Version wählen" />
+                          <SelectValue placeholder={t('version.selectVersion')} />
                         </SelectTrigger>
                         <SelectContent>
                           {history.versions.map((v) => (
@@ -341,10 +343,10 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                       </Select>
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Neuere Version</label>
+                      <label className="text-sm font-medium mb-2 block">{t('version.newerVersion')}</label>
                       <Select value={newVersionId} onValueChange={setNewVersionId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Version wählen" />
+                          <SelectValue placeholder={t('version.selectVersion')} />
                         </SelectTrigger>
                         <SelectContent>
                           {history.versions.map((v) => (
@@ -365,10 +367,10 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                     {compareLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Vergleiche...
+                        {t('version.comparing')}
                       </>
                     ) : (
-                      'Vergleich starten'
+                      t('version.startComparison')
                     )}
                   </Button>
 
@@ -380,14 +382,14 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                         <div className="text-lg font-medium mb-2">{comparison.changes.summary}</div>
                         <div className="flex items-center justify-center gap-4">
                           <div>
-                            <div className="text-sm text-muted-foreground">Vorher</div>
+                            <div className="text-sm text-muted-foreground">{t('version.before')}</div>
                             <div className={`text-2xl font-bold ${getScoreColor(comparison.oldAnalysis.geoScore)}`}>
                               {comparison.oldAnalysis.geoScore}
                             </div>
                           </div>
                           <ArrowRight className="h-6 w-6" />
                           <div>
-                            <div className="text-sm text-muted-foreground">Nachher</div>
+                            <div className="text-sm text-muted-foreground">{t('version.after')}</div>
                             <div className={`text-2xl font-bold ${getScoreColor(comparison.newAnalysis.geoScore)}`}>
                               {comparison.newAnalysis.geoScore}
                             </div>
@@ -400,7 +402,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                         <div>
                           <h4 className="text-sm font-medium flex items-center gap-2 mb-2 text-green-600">
                             <CheckCircle2 className="h-4 w-4" />
-                            Behobene Schwächen ({comparison.changes.fixedWeaknesses.length})
+                            {t('version.fixedWeaknesses')} ({comparison.changes.fixedWeaknesses.length})
                           </h4>
                           <ul className="space-y-1">
                             {comparison.changes.fixedWeaknesses.map((w, i) => (
@@ -417,7 +419,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                         <div>
                           <h4 className="text-sm font-medium flex items-center gap-2 mb-2 text-blue-600">
                             <Plus className="h-4 w-4" />
-                            Neue Stärken ({comparison.changes.newStrengths.length})
+                            {t('version.newStrengths')} ({comparison.changes.newStrengths.length})
                           </h4>
                           <ul className="space-y-1">
                             {comparison.changes.newStrengths.map((s, i) => (
@@ -434,7 +436,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                         <div>
                           <h4 className="text-sm font-medium flex items-center gap-2 mb-2 text-red-600">
                             <XCircle className="h-4 w-4" />
-                            Neue Schwächen ({comparison.changes.newWeaknesses.length})
+                            {t('version.newWeaknesses')} ({comparison.changes.newWeaknesses.length})
                           </h4>
                           <ul className="space-y-1">
                             {comparison.changes.newWeaknesses.map((w, i) => (
@@ -451,7 +453,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                         <div>
                           <h4 className="text-sm font-medium flex items-center gap-2 mb-2 text-amber-600">
                             <XCircle className="h-4 w-4" />
-                            Verlorene Stärken ({comparison.changes.removedStrengths.length})
+                            {t('version.lostStrengths')} ({comparison.changes.removedStrengths.length})
                           </h4>
                           <ul className="space-y-1">
                             {comparison.changes.removedStrengths.map((s, i) => (
@@ -469,7 +471,7 @@ export function VersionHistory({ url, isOpen, onClose }: VersionHistoryProps) {
                        comparison.changes.newWeaknesses.length === 0 &&
                        comparison.changes.removedStrengths.length === 0 && (
                         <div className="text-center text-muted-foreground py-4">
-                          Keine signifikanten Änderungen zwischen diesen Versionen.
+                          {t('version.noSignificantChanges')}
                         </div>
                       )}
                     </div>

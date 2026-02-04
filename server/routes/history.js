@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
     res.json({ analyses })
   } catch (error) {
     console.error('Error fetching history:', error)
-    res.status(500).json({ error: 'Konnte Historie nicht laden' })
+    res.status(500).json({ error: 'HISTORY_LOAD_FAILED' })
   }
 })
 
@@ -22,13 +22,13 @@ router.get('/:id', (req, res) => {
     const analysis = getAnalysisById(id)
 
     if (!analysis) {
-      return res.status(404).json({ error: 'Analyse nicht gefunden' })
+      return res.status(404).json({ error: 'ANALYSIS_NOT_FOUND' })
     }
 
     res.json(analysis)
   } catch (error) {
     console.error('Error fetching analysis:', error)
-    res.status(500).json({ error: 'Konnte Analyse nicht laden' })
+    res.status(500).json({ error: 'HISTORY_LOAD_FAILED' })
   }
 })
 
@@ -39,13 +39,13 @@ router.delete('/:id', (req, res) => {
     const deleted = deleteAnalysis(id)
 
     if (!deleted) {
-      return res.status(404).json({ error: 'Analyse nicht gefunden' })
+      return res.status(404).json({ error: 'ANALYSIS_NOT_FOUND' })
     }
 
     res.json({ success: true })
   } catch (error) {
     console.error('Error deleting analysis:', error)
-    res.status(500).json({ error: 'Konnte Analyse nicht loeschen' })
+    res.status(500).json({ error: 'ANALYSIS_DELETE_FAILED' })
   }
 })
 
@@ -65,7 +65,7 @@ router.get('/url/:encodedUrl', (req, res) => {
     const history = getUrlHistory(url, limit)
 
     if (history.length === 0) {
-      return res.status(404).json({ error: 'Keine Analysen fuer diese URL gefunden' })
+      return res.status(404).json({ error: 'ANALYSIS_NOT_FOUND' })
     }
 
     // Calculate trend data
@@ -89,7 +89,7 @@ router.get('/url/:encodedUrl', (req, res) => {
     })
   } catch (error) {
     console.error('Error fetching URL history:', error)
-    res.status(500).json({ error: 'Konnte URL-Historie nicht laden' })
+    res.status(500).json({ error: 'HISTORY_LOAD_FAILED' })
   }
 })
 
@@ -104,13 +104,13 @@ router.get('/compare/:oldId/:newId', (req, res) => {
     const comparison = compareAnalyses(oldId, newId)
 
     if (!comparison) {
-      return res.status(404).json({ error: 'Eine oder beide Analysen nicht gefunden' })
+      return res.status(404).json({ error: 'ANALYSIS_NOT_FOUND' })
     }
 
     res.json(comparison)
   } catch (error) {
     console.error('Error comparing analyses:', error)
-    res.status(500).json({ error: 'Vergleich fehlgeschlagen' })
+    res.status(500).json({ error: 'COMPARISON_FAILED' })
   }
 })
 

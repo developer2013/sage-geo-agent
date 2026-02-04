@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Bot, Info, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -93,40 +94,42 @@ function calculateCitationProbabilities(
       probability: Math.min(95, Math.max(5, chatgptProb)),
       color: 'bg-emerald-500',
       icon: '🤖',
-      factors: ['GEO-Score', 'Struktur', 'Quellenangaben']
+      factors: ['citation.factorGeoScore', 'citation.factorStructure', 'citation.factorSources']
     },
     {
       name: 'Perplexity',
       probability: Math.min(95, Math.max(5, perplexityProb)),
       color: 'bg-blue-500',
       icon: '🔍',
-      factors: ['Statistiken', 'Zitate', 'Aktualität']
+      factors: ['citation.factorStatistics', 'citation.factorCitations', 'citation.factorActuality']
     },
     {
       name: 'Google AI',
       probability: Math.min(95, Math.max(5, googleProb)),
       color: 'bg-red-500',
       icon: '🔷',
-      factors: ['Schema-Markup', 'E-E-A-T', 'GEO-Score']
+      factors: ['citation.factorSchema', 'citation.factorEEAT', 'citation.factorGeoScore']
     },
     {
       name: 'Claude',
       probability: Math.min(95, Math.max(5, claudeProb)),
       color: 'bg-orange-500',
       icon: '🧠',
-      factors: ['Quellenqualität', 'Zitate', 'Statistiken']
+      factors: ['citation.factorSourceQuality', 'citation.factorCitations', 'citation.factorStatistics']
     }
   ]
 }
 
-function getProbabilityLabel(prob: number): { label: string; color: string } {
-  if (prob >= 75) return { label: 'Hoch', color: 'text-green-600' }
-  if (prob >= 50) return { label: 'Mittel', color: 'text-yellow-600' }
-  if (prob >= 25) return { label: 'Niedrig', color: 'text-orange-600' }
-  return { label: 'Sehr niedrig', color: 'text-red-600' }
-}
-
 export function CitationProbability({ result }: CitationProbabilityProps) {
+  const { t } = useTranslation()
+
+  const getProbabilityLabel = (prob: number): { label: string; color: string } => {
+    if (prob >= 75) return { label: t('citation.probHigh'), color: 'text-green-600' }
+    if (prob >= 50) return { label: t('citation.probMedium'), color: 'text-yellow-600' }
+    if (prob >= 25) return { label: t('citation.probLow'), color: 'text-orange-600' }
+    return { label: t('citation.probVeryLow'), color: 'text-red-600' }
+  }
+
   const hasSchema = result.pageCode?.schemaMarkup &&
     Object.keys(result.pageCode.schemaMarkup).length > 0
 
@@ -145,7 +148,7 @@ export function CitationProbability({ result }: CitationProbabilityProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-lg flex items-center gap-2">
           <Bot className="h-5 w-5" />
-          LLM-Zitations-Wahrscheinlichkeit
+          {t('citation.title')}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
@@ -153,12 +156,10 @@ export function CitationProbability({ result }: CitationProbabilityProps) {
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <p className="text-sm">
-                  Geschätzte Wahrscheinlichkeit, dass diese Seite von verschiedenen
-                  LLMs als Quelle zitiert wird. Basiert auf GEO-Score, Statistik-Dichte,
-                  Schema-Markup und Quellenangaben.
+                  {t('citation.tooltip')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  ⚠️ Dies ist eine Schätzung, keine Garantie.
+                  {t('citation.disclaimer')}
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -170,7 +171,7 @@ export function CitationProbability({ result }: CitationProbabilityProps) {
         <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            <span className="font-medium">Durchschnittliche Chance</span>
+            <span className="font-medium">{t('citation.averageChance')}</span>
           </div>
           <div className={`text-2xl font-bold ${getProbabilityLabel(avgProbability).color}`}>
             {avgProbability}%
@@ -200,7 +201,7 @@ export function CitationProbability({ result }: CitationProbabilityProps) {
                       key={factor}
                       className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
                     >
-                      {factor}
+                      {t(factor)}
                     </span>
                   ))}
                 </div>
@@ -211,18 +212,18 @@ export function CitationProbability({ result }: CitationProbabilityProps) {
 
         {/* Improvement Tips */}
         <div className="pt-3 border-t text-sm text-muted-foreground">
-          <p className="font-medium mb-1">So erhoehst du deine Chancen:</p>
+          <p className="font-medium mb-1">{t('citation.improveTips')}</p>
           <ul className="list-disc list-inside space-y-0.5 text-xs">
-            {result.geoScore < 70 && <li>GEO-Score auf 70+ verbessern</li>}
+            {result.geoScore < 70 && <li>{t('citation.tipGeoScore')}</li>}
             {(result.contentStats?.externalLinks || 0) < 3 && (
-              <li>Mehr externe Quellen verlinken</li>
+              <li>{t('citation.tipExternalLinks')}</li>
             )}
-            {!hasSchema && <li>Schema-Markup (JSON-LD) implementieren</li>}
+            {!hasSchema && <li>{t('citation.tipSchema')}</li>}
             {(result.contentStats?.tableCount || 0) < 1 && (
-              <li>Tabellen mit Daten/Statistiken hinzufuegen</li>
+              <li>{t('citation.tipTables')}</li>
             )}
             {(result.contentStats?.listCount || 0) < 2 && (
-              <li>Strukturierte Listen verwenden</li>
+              <li>{t('citation.tipLists')}</li>
             )}
           </ul>
         </div>

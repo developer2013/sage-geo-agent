@@ -13,7 +13,7 @@ router.get('/audiences', (req, res) => {
     res.json({ audiences })
   } catch (error) {
     console.error('Error fetching audiences:', error)
-    res.status(500).json({ error: 'Konnte Zielgruppen nicht laden' })
+    res.status(500).json({ error: 'BRAND_LOAD_FAILED' })
   }
 })
 
@@ -27,7 +27,7 @@ router.get('/context', (req, res) => {
     res.json(context)
   } catch (error) {
     console.error('Error fetching brand context:', error)
-    res.status(500).json({ error: 'Konnte Brand-Kontext nicht laden' })
+    res.status(500).json({ error: 'BRAND_LOAD_FAILED' })
   }
 })
 

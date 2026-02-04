@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Clock, ExternalLink, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -31,6 +32,7 @@ export function HistoryPanel({
   onSelectItem,
   onDeleteItem,
 }: HistoryPanelProps) {
+  const { t, i18n } = useTranslation()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [touchStart, setTouchStart] = useState<number | null>(null)
 
@@ -51,13 +53,13 @@ export function HistoryPanel({
   const handleDelete = () => {
     if (deleteId) {
       onDeleteItem(deleteId)
-      toast.success('Analyse geloescht')
+      toast.success(t('history.deleted'))
       setDeleteId(null)
     }
   }
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('de-DE', {
+    return date.toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'de-DE', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -100,7 +102,7 @@ export function HistoryPanel({
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            <h2 className="font-semibold">Analyse-Historie</h2>
+            <h2 className="font-semibold">{t('history.title')}</h2>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />
@@ -111,7 +113,7 @@ export function HistoryPanel({
           <div className="p-4 space-y-3">
             {history.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                Noch keine Analysen durchgefuehrt.
+                {t('history.empty')}
               </p>
             ) : (
               history.map((item) => (
@@ -164,15 +166,15 @@ export function HistoryPanel({
     <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Analyse loeschen?</AlertDialogTitle>
+          <AlertDialogTitle>{t('history.deleteConfirmTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
-            Diese Aktion kann nicht rueckgaengig gemacht werden. Die Analyse wird dauerhaft geloescht.
+            {t('history.deleteConfirmDescription')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
           <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-            Loeschen
+            {t('common.delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MousePointerClick } from 'lucide-react'
 import type { SerpAnalysis } from '@/types'
@@ -8,6 +9,8 @@ interface ClickWorthinessScoreProps {
 }
 
 export function ClickWorthinessScore({ score, metrics }: ClickWorthinessScoreProps) {
+  const { t } = useTranslation()
+
   const getScoreColor = (score: number) => {
     if (score >= 70) return 'text-emerald-500'
     if (score >= 40) return 'text-amber-500'
@@ -36,10 +39,10 @@ export function ClickWorthinessScore({ score, metrics }: ClickWorthinessScorePro
   const strokeDashoffset = circumference - (score / 100) * circumference
 
   const metricsList = [
-    { key: 'titleQuality', label: 'Title Qualitaet', metric: metrics.titleQuality },
-    { key: 'descriptionQuality', label: 'Description Qualitaet', metric: metrics.descriptionQuality },
-    { key: 'b2bSignals', label: 'B2B Signale', metric: metrics.b2bSignals },
-    { key: 'trustTriggers', label: 'Vertrauenssignale', metric: metrics.trustTriggers },
+    { key: 'titleQuality', label: t('serp.titleQuality'), metric: metrics.titleQuality },
+    { key: 'descriptionQuality', label: t('serp.descriptionQuality'), metric: metrics.descriptionQuality },
+    { key: 'b2bSignals', label: t('serp.b2bSignals'), metric: metrics.b2bSignals },
+    { key: 'trustTriggers', label: t('serp.trustTriggers'), metric: metrics.trustTriggers },
     { key: 'featureClarity', label: 'Feature Clarity', metric: metrics.featureClarity },
     { key: 'videoContent', label: 'Video Content', metric: metrics.videoContent },
   ]

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Sparkles, ChevronDown } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -35,6 +36,7 @@ interface BrandSettingsProps {
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export function BrandSettings({ settings, onChange }: BrandSettingsProps) {
+  const { t } = useTranslation()
   const [audiences, setAudiences] = useState<Audience[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
@@ -78,7 +80,7 @@ export function BrandSettings({ settings, onChange }: BrandSettingsProps) {
               className="flex items-center gap-2 cursor-pointer"
             >
               <Sparkles className="h-4 w-4 text-primary" />
-              <span className="font-medium">Sage Brand Voice</span>
+              <span className="font-medium">{t('brand.sageBrandVoice')}</span>
             </Label>
           </div>
           {settings.useSageBrand && (
@@ -92,14 +94,14 @@ export function BrandSettings({ settings, onChange }: BrandSettingsProps) {
 
         <CollapsibleContent className="mt-3 space-y-3">
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Zielgruppe</Label>
+            <Label className="text-sm text-muted-foreground">{t('brand.targetAudience')}</Label>
             <Select
               value={settings.targetAudience}
               onValueChange={handleAudienceChange}
               disabled={!settings.useSageBrand}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Zielgruppe waehlen" />
+                <SelectValue placeholder={t('brand.selectAudience')} />
               </SelectTrigger>
               <SelectContent>
                 {audiences.map((audience) => (
@@ -115,11 +117,11 @@ export function BrandSettings({ settings, onChange }: BrandSettingsProps) {
           </div>
 
           <div className="text-xs text-muted-foreground bg-primary/5 rounded p-2">
-            <p className="font-medium mb-1">Wenn aktiviert:</p>
+            <p className="font-medium mb-1">{t('brand.whenEnabled')}</p>
             <ul className="list-disc list-inside space-y-0.5">
-              <li>Content folgt Sage Tone of Voice (Human, Simplify, Trust, Bold)</li>
-              <li>Zielgruppen-spezifisches Messaging</li>
-              <li>Angepasste Formulierungen und CTAs</li>
+              <li>{t('brand.infoToneOfVoice')}</li>
+              <li>{t('brand.infoTargetMessaging')}</li>
+              <li>{t('brand.infoCustomCtas')}</li>
             </ul>
           </div>
         </CollapsibleContent>

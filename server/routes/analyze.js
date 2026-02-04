@@ -289,7 +289,20 @@ router.post('/stream', async (req, res) => {
   }
 
   try {
-    const { url, forceRefresh, imageSettings } = req.body
+    const { url, forceRefresh, imageSettings, lang = 'de' } = req.body
+
+    // Progress messages by language
+    const progressMessages = lang === 'en' ? {
+      checkCache: 'Checking cache...',
+      loadPage: 'Loading website...',
+      aiAnalysis: 'Analyzing with AI...',
+      createReport: 'Creating report...'
+    } : {
+      checkCache: 'Prüfe Cache...',
+      loadPage: 'Lade Webseite...',
+      aiAnalysis: 'Analysiere mit KI...',
+      createReport: 'Erstelle Bericht...'
+    }
 
     // Default image settings
     const settings = {
@@ -299,7 +312,7 @@ router.post('/stream', async (req, res) => {
     }
 
     if (!url) {
-      res.write(`data: ${JSON.stringify({ type: 'error', error: 'URL ist erforderlich' })}\n\n`)
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'URL_REQUIRED' })}\n\n`)
       res.end()
       return
     }
@@ -308,14 +321,14 @@ router.post('/stream', async (req, res) => {
     try {
       validUrl = new URL(url)
     } catch {
-      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Ungueltige URL' })}\n\n`)
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'INVALID_URL' })}\n\n`)
       res.end()
       return
     }
 
     // Check for cached analysis (unless force refresh)
     if (!forceRefresh) {
-      sendProgress(1, 'Prüfe Cache...')
+      sendProgress(1, progressMessages.checkCache)
       const cached = getRecentAnalysisByUrl(validUrl.href, 24)
       if (cached) {
         logSuccess('Analyze', 0, { 'Cache': 'Hit', 'URL': validUrl.hostname })
@@ -325,7 +338,7 @@ router.post('/stream', async (req, res) => {
       }
     }
 
-    sendProgress(1, 'Lade Webseite...')
+    sendProgress(1, progressMessages.loadPage)
 
     // Track status for summary
     const analysisStatus = {
@@ -360,11 +373,11 @@ router.post('/stream', async (req, res) => {
       throw scrapeError
     }
 
-    sendProgress(2, 'Analysiere mit KI...')
+    sendProgress(2, progressMessages.aiAnalysis)
 
     let analysisResult
     try {
-      analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
+      analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings, lang)
 
       // Capture Claude status
       analysisStatus.claude = {
@@ -386,7 +399,7 @@ router.post('/stream', async (req, res) => {
       throw claudeError
     }
 
-    sendProgress(3, 'Erstelle Bericht...')
+    sendProgress(3, progressMessages.createReport)
 
     // Calculate content stats and performance metrics (pass headingVisibility for accurate H1 count)
     const contentStats = calculateContentStats(pageCode.html, validUrl.href, pageCode.headingVisibility)
@@ -439,7 +452,7 @@ router.post('/stream', async (req, res) => {
     res.end()
   } catch (error) {
     logError('Analyze', error)
-    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message || 'Analyse fehlgeschlagen' })}\n\n`)
+    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message || 'ANALYSIS_FAILED' })}\n\n`)
     res.end()
   }
 })
@@ -447,7 +460,7 @@ router.post('/stream', async (req, res) => {
 // Regular endpoint (kept for compatibility)
 router.post('/', async (req, res) => {
   try {
-    const { url, forceRefresh, imageSettings } = req.body
+    const { url, forceRefresh, imageSettings, lang = 'de' } = req.body
 
     // Default image settings (same as streaming endpoint)
     const settings = {
@@ -457,14 +470,14 @@ router.post('/', async (req, res) => {
     }
 
     if (!url) {
-      return res.status(400).json({ error: 'URL ist erforderlich' })
+      return res.status(400).json({ error: 'URL_REQUIRED' })
     }
 
     let validUrl
     try {
       validUrl = new URL(url)
     } catch {
-      return res.status(400).json({ error: 'Ungueltige URL' })
+      return res.status(400).json({ error: 'INVALID_URL' })
     }
 
     // Check for cached analysis (unless force refresh)
@@ -511,7 +524,7 @@ router.post('/', async (req, res) => {
 
     let analysisResult
     try {
-      analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings)
+      analysisResult = await analyzeWithClaude(validUrl.href, null, pageCode, settings, lang)
 
       // Capture Claude status
       analysisStatus.claude = {
@@ -584,7 +597,7 @@ router.post('/', async (req, res) => {
   } catch (error) {
     logError('Analyze', error)
     res.status(500).json({
-      error: error.message || 'Analyse fehlgeschlagen'
+      error: error.message || 'ANALYSIS_FAILED'
     })
   }
 })

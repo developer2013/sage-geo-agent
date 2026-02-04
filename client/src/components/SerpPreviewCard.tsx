@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, Globe } from 'lucide-react'
 import type { SerpAnalysis, AttentionTrigger } from '@/types'
@@ -8,6 +9,7 @@ interface SerpPreviewCardProps {
 }
 
 export function SerpPreviewCard({ preview, attentionTriggers }: SerpPreviewCardProps) {
+  const { t } = useTranslation()
   const foundTriggers = attentionTriggers.filter(t => t.found)
 
   return (
@@ -15,7 +17,7 @@ export function SerpPreviewCard({ preview, attentionTriggers }: SerpPreviewCardP
       <CardHeader className="pb-2">
         <CardTitle className="text-lg flex items-center gap-2">
           <Globe className="h-5 w-5" />
-          Google SERP Vorschau
+          {t('serp.googlePreview')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -45,7 +47,7 @@ export function SerpPreviewCard({ preview, attentionTriggers }: SerpPreviewCardP
             {preview.truncatedTitle && (
               <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-0.5">
                 <AlertTriangle className="w-3 h-3" />
-                Title wird in den Suchergebnissen abgeschnitten
+                {t('serp.titleTruncated')}
               </div>
             )}
           </div>
@@ -64,7 +66,7 @@ export function SerpPreviewCard({ preview, attentionTriggers }: SerpPreviewCardP
             {preview.truncatedDescription && (
               <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-0.5">
                 <AlertTriangle className="w-3 h-3" />
-                Description wird in den Suchergebnissen abgeschnitten
+                {t('serp.descriptionTruncated')}
               </div>
             )}
           </div>
@@ -91,10 +93,10 @@ export function SerpPreviewCard({ preview, attentionTriggers }: SerpPreviewCardP
         {/* Character counts */}
         <div className="flex gap-4 text-xs text-muted-foreground">
           <span className={preview.title.length > 60 ? 'text-amber-600' : preview.title.length < 30 ? 'text-amber-600' : 'text-emerald-600'}>
-            Title: {preview.title.length}/60 Zeichen
+            {t('serp.titleChars', { count: preview.title.length })}
           </span>
           <span className={preview.description.length > 160 ? 'text-amber-600' : preview.description.length < 120 ? 'text-amber-600' : 'text-emerald-600'}>
-            Description: {preview.description.length}/160 Zeichen
+            {t('serp.descriptionChars', { count: preview.description.length })}
           </span>
         </div>
       </CardContent>

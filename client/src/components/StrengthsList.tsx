@@ -1,5 +1,6 @@
 import { CheckCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { useTranslation } from 'react-i18next'
 import type { Strength } from '@/types'
 
 interface StrengthsListProps {
@@ -7,10 +8,12 @@ interface StrengthsListProps {
 }
 
 export function StrengthsList({ strengths }: StrengthsListProps) {
+  const { t } = useTranslation()
+
   if (strengths.length === 0) {
     return (
       <p className="text-muted-foreground text-center py-8">
-        Keine Staerken gefunden.
+        {t('strengths.empty')}
       </p>
     )
   }

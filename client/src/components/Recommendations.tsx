@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Zap, Clock, Calendar, TrendingUp, Star } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,8 @@ interface RecommendationsProps {
 }
 
 export function Recommendations({ recommendations, nextStep }: RecommendationsProps) {
+  const { t } = useTranslation()
+
   const getIcon = (timeframe: string) => {
     switch (timeframe) {
       case 'SOFORT':
@@ -96,7 +99,7 @@ export function Recommendations({ recommendations, nextStep }: RecommendationsPr
                 <Zap className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h4 className="font-semibold text-primary">Naechster Schritt</h4>
+                <h4 className="font-semibold text-primary">{t('recommendations.nextStep')}</h4>
                 <p className="text-sm mt-1">{nextStep}</p>
               </div>
             </div>
@@ -113,10 +116,10 @@ export function Recommendations({ recommendations, nextStep }: RecommendationsPr
                 <div className="flex items-center gap-2">
                   <Badge className={getBadgeClass(timeframe)}>
                     {getIcon(timeframe)}
-                    <span className="ml-1">{timeframe}</span>
+                    <span className="ml-1">{t(`timeframe.${timeframe}`)}</span>
                   </Badge>
                   <span className="text-muted-foreground text-sm">
-                    ({recs.length} {recs.length === 1 ? 'Empfehlung' : 'Empfehlungen'})
+                    ({recs.length} {recs.length === 1 ? t('recommendations.recommendation') : t('recommendations.recommendations_plural')})
                   </span>
                 </div>
               </AccordionTrigger>
@@ -145,9 +148,9 @@ export function Recommendations({ recommendations, nextStep }: RecommendationsPr
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="font-medium">Impact: {rec.impact.level}</p>
+                                  <p className="font-medium">Impact: {t(`impact.${rec.impact.level}`)}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    Quelle: {rec.impact.source}
+                                    {t('recommendations.source')}: {rec.impact.source}
                                   </p>
                                 </TooltipContent>
                               </Tooltip>

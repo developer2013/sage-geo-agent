@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ analysis }: ChatPanelProps) {
+  const { t, i18n } = useTranslation()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -96,6 +98,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
           },
           history: messages,
           brandSettings: brandSettings.useSageBrand ? brandSettings : undefined,
+          lang: i18n.language,
         }),
       })
 
@@ -140,7 +143,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
               } else if (event.type === 'error') {
                 setMessages(prev => [
                   ...prev,
-                  { role: 'assistant', content: `Fehler: ${event.error}` },
+                  { role: 'assistant', content: `${t('chat.errorPrefix')}: ${event.error}` },
                 ])
               }
             } catch {
@@ -152,7 +155,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
     } catch (err) {
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: 'Entschuldigung, es gab einen Fehler. Bitte versuche es erneut.' },
+        { role: 'assistant', content: t('chat.errorGeneric') },
       ])
     } finally {
       setIsLoading(false)
@@ -177,7 +180,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
 
     if (criticalWeaknesses.length > 0) {
       const firstCritical = criticalWeaknesses[0]
-      questions.push(`Wie behebe ich: ${firstCritical.title}?`)
+      questions.push(t('chat.suggestFix', { title: firstCritical.title }))
     }
 
     // Check for specific issues and add relevant questions
@@ -185,12 +188,12 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
       w.title.toLowerCase().includes('schema') || w.description.toLowerCase().includes('schema')
     )
     if (hasNoSchema) {
-      questions.push('Generiere Schema Markup für diese Seite')
+      questions.push(t('chat.suggestSchema'))
     }
 
     const hasNoCTA = analysis.ctaAnalysis?.ctaQuality === 'SCHLECHT' || !analysis.ctaAnalysis?.primaryCta
     if (hasNoCTA) {
-      questions.push('Wie gestalte ich bessere CTAs?')
+      questions.push(t('chat.suggestCta'))
     }
 
     // Try to extract domain/keyword for competitor search
@@ -198,18 +201,18 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
       const domain = new URL(analysis.url).hostname.replace('www.', '')
       const domainParts = domain.split('.')
       if (domainParts.length > 1 && questions.length < 3) {
-        questions.push(`Finde Konkurrenten für ${domainParts[0]}`)
+        questions.push(t('chat.suggestCompetitors', { domain: domainParts[0] }))
       }
     } catch {
       // Fallback if URL parsing fails
       if (questions.length < 3) {
-        questions.push('Finde meine Konkurrenten')
+        questions.push(t('chat.suggestCompetitorsFallback'))
       }
     }
 
     // Add sitemap analysis suggestion
     if (questions.length < 4) {
-      questions.push('Analysiere meine Sitemap')
+      questions.push(t('chat.suggestSitemap'))
     }
 
     // Ensure max 4 questions
@@ -233,17 +236,17 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
               </div>
               <div className="text-left">
                 <h3 className="font-semibold">
-                  Mit Claude chatten
+                  {t('chat.expandTitle')}
                   {messages.length > 0 && (
                     <span className="ml-2 text-xs text-primary">
-                      ({messages.length} Nachrichten)
+                      ({messages.length} {t('chat.messages')})
                     </span>
                   )}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {messages.length > 0
-                    ? 'Setze die Unterhaltung fort'
-                    : 'Suche Konkurrenten, analysiere Sitemaps, generiere Schema Markup'}
+                    ? t('chat.continueChat')
+                    : t('chat.description')}
                 </p>
               </div>
             </div>
@@ -262,14 +265,14 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
             <div className="neu-icon p-2">
               <MessageCircle className="h-4 w-4 text-primary" />
             </div>
-            Chat mit Claude
+            {t('chat.title')}
           </CardTitle>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsExpanded(false)}
           >
-            Minimieren
+            {t('chat.minimize')}
           </Button>
         </div>
       </CardHeader>
@@ -280,7 +283,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
             {messages.length === 0 && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Claude kann Webseiten abrufen, Konkurrenten suchen, Sitemaps analysieren und Schema Markup generieren.
+                  {t('chat.capabilities')}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {suggestedQuestions.map((question, index) => (
@@ -336,13 +339,13 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
                     <div className="flex items-center gap-2 text-sm text-primary mb-2">
                       <Loader2 className="h-3 w-3 animate-spin" />
                       <span>
-                        {currentTool === 'fetch_webpage' && 'Lade Webseite...'}
-                        {currentTool === 'compare_pages' && 'Vergleiche 2 Seiten...'}
-                        {currentTool === 'compare_multiple' && 'Vergleiche mehrere Seiten...'}
-                        {currentTool === 'search_competitors' && 'Suche Konkurrenten...'}
-                        {currentTool === 'generate_schema_markup' && 'Bereite Schema vor...'}
-                        {currentTool === 'analyze_sitemap' && 'Analysiere Sitemap...'}
-                        {!['fetch_webpage', 'compare_pages', 'compare_multiple', 'search_competitors', 'generate_schema_markup', 'analyze_sitemap'].includes(currentTool) && 'Verarbeite...'}
+                        {currentTool === 'fetch_webpage' && t('chat.toolFetchWebpage')}
+                        {currentTool === 'compare_pages' && t('chat.toolComparePages')}
+                        {currentTool === 'compare_multiple' && t('chat.toolCompareMultiple')}
+                        {currentTool === 'search_competitors' && t('chat.toolSearchCompetitors')}
+                        {currentTool === 'generate_schema_markup' && t('chat.toolGenerateSchema')}
+                        {currentTool === 'analyze_sitemap' && t('chat.toolAnalyzeSitemap')}
+                        {!['fetch_webpage', 'compare_pages', 'compare_multiple', 'search_competitors', 'generate_schema_markup', 'analyze_sitemap'].includes(currentTool) && t('chat.toolProcessing')}
                       </span>
                     </div>
                   )}
@@ -366,7 +369,7 @@ export function ChatPanel({ analysis }: ChatPanelProps) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Stelle eine Frage zur Analyse..."
+            placeholder={t('chat.placeholder')}
             disabled={isLoading}
             className="flex-1"
           />

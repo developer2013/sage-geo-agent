@@ -24,34 +24,13 @@ function loadBrandContext() {
 }
 
 /**
- * Get available audiences for UI dropdown
- */
-export function getAvailableAudiences() {
-  const context = loadBrandContext()
-  if (!context.audiences) return []
-
-  return Object.entries(context.audiences).map(([key, value]) => ({
-    id: key,
-    name: value.name,
-    description: value.description
-  }))
-}
-
-/**
- * Get the brand context for API response
- */
-export function getBrandContext() {
-  return loadBrandContext()
-}
-
-/**
- * Generate brand-aware prompt addition for content generation
+ * Generate brand-aware prompt addition for content generation (English)
  * @param {Object} settings - Brand settings
  * @param {boolean} settings.useSageBrand - Whether to apply brand guidelines
  * @param {string} settings.targetAudience - Target audience key (e.g., 'smallBusiness')
  * @returns {string} Prompt addition or empty string
  */
-export function getBrandPromptAddition(settings) {
+export function getBrandPromptAdditionEn(settings) {
   if (!settings?.useSageBrand) {
     return ''
   }
@@ -74,8 +53,8 @@ export function getBrandPromptAddition(settings) {
   let promptAddition = `
 ## Sage Tone of Voice Guidelines
 
-Du schreibst Content fuer Sage, ein fuehrendes Unternehmen fuer Business-Software.
-Wende diese Prinzipien an:
+You are writing content for Sage, a leading business software company.
+Apply these principles:
 
 `
 
@@ -91,12 +70,12 @@ ${principle.description}
 
   // Add audience-specific guidance
   if (selectedAudience) {
-    promptAddition += `## Zielgruppe: ${selectedAudience.name}
+    promptAddition += `## Target Audience: ${selectedAudience.name}
 ${selectedAudience.description}
 
-**Fokus-Themen:** ${selectedAudience.focus.join(', ')}
+**Focus Topics:** ${selectedAudience.focus.join(', ')}
 
-**Messaging-Hinweise:**
+**Messaging Guidelines:**
 ${selectedAudience.messagingGuidance.map(m => `- ${m}`).join('\n')}
 
 `
@@ -104,11 +83,11 @@ ${selectedAudience.messagingGuidance.map(m => `- ${m}`).join('\n')}
 
   // Add content guidelines
   if (context.contentGuidelines) {
-    promptAddition += `## Content-Richtlinien
+    promptAddition += `## Content Guidelines
 
 **Headlines:** ${context.contentGuidelines.headlines?.style}
 **CTAs:** ${context.contentGuidelines.cta?.style}
-**Unterstuetzender Text:** ${context.contentGuidelines.supportiveText?.style}
+**Supporting Text:** ${context.contentGuidelines.supportiveText?.style}
 `
   }
 
@@ -116,13 +95,13 @@ ${selectedAudience.messagingGuidance.map(m => `- ${m}`).join('\n')}
 }
 
 /**
- * Transform a generic text into Sage brand voice
+ * Transform a generic text into Sage brand voice (English)
  * @param {string} text - Original text
  * @param {Object} settings - Brand settings
  * @returns {string} Prompt for transforming the text
  */
-export function getTransformPrompt(text, settings) {
-  const brandAddition = getBrandPromptAddition(settings)
+export function getTransformPromptEn(text, settings) {
+  const brandAddition = getBrandPromptAdditionEn(settings)
 
   if (!brandAddition) {
     return null
@@ -130,27 +109,19 @@ export function getTransformPrompt(text, settings) {
 
   return `${brandAddition}
 
-## Aufgabe
+## Task
 
-Transformiere den folgenden Text in Sage Brand Voice.
-Behalte die Kernaussagen bei, passe aber Ton, Stil und Formulierung an die Sage-Richtlinien an.
+Transform the following text into Sage Brand Voice.
+Keep the core messages but adapt tone, style, and phrasing to the Sage guidelines.
 
-**Originaltext:**
+**Original Text:**
 ${text}
 
-**Transformierter Text:**
+**Transformed Text:**
 `
 }
 
-/**
- * Language-aware brand prompt addition
- * Delegates to the English version when lang === 'en'
- */
-export { getBrandPromptAdditionEn } from './brandPromptEn.js'
-
 export default {
-  getBrandPromptAddition,
-  getAvailableAudiences,
-  getBrandContext,
-  getTransformPrompt
+  getBrandPromptAdditionEn,
+  getTransformPromptEn
 }

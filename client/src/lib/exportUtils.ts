@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import type { AnalysisResult } from '@/types'
 
 /**
@@ -83,12 +84,21 @@ export async function exportAsPDF(result: AnalysisResult): Promise<void> {
   content.style.maxWidth = '800px'
   content.style.margin = '0 auto'
 
+  const t = i18n.t.bind(i18n)
+  const locale = i18n.language === 'en' ? 'en-US' : 'de-DE'
+  const reportTitle = escapeHtml(t('pdf.reportTitle'))
+  const createdAt = escapeHtml(t('pdf.createdAt', { date: new Date().toLocaleDateString(locale) }))
+  const strengthsLabel = escapeHtml(t('pdf.strengths'))
+  const weaknessesLabel = escapeHtml(t('pdf.weaknesses'))
+  const recommendationsLabel = escapeHtml(t('pdf.recommendations'))
+  const footerText = escapeHtml(t('pdf.footer'))
+
   // Build the full HTML with escaped content
-  // This is safe as all dynamic content is escaped above
+  // This is safe as all dynamic content is escaped above via escapeHtml()
   content.innerHTML = `
     <div style="text-align: center; margin-bottom: 30px;">
-      <h1 style="color: #6366f1; margin-bottom: 10px;">GEO-Analyse Report</h1>
-      <p style="color: #666; font-size: 14px;">Erstellt am ${new Date().toLocaleDateString('de-DE')}</p>
+      <h1 style="color: #6366f1; margin-bottom: 10px;">${reportTitle}</h1>
+      <p style="color: #666; font-size: 14px;">${createdAt}</p>
     </div>
 
     <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
@@ -106,28 +116,28 @@ export async function exportAsPDF(result: AnalysisResult): Promise<void> {
 
     <div style="margin-bottom: 20px;">
       <h3 style="color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 8px;">
-        Staerken (${result.strengths.length})
+        ${strengthsLabel} (${result.strengths.length})
       </h3>
       ${strengthsHtml}
     </div>
 
     <div style="margin-bottom: 20px;">
       <h3 style="color: #ef4444; border-bottom: 2px solid #ef4444; padding-bottom: 8px;">
-        Schwaechen (${result.weaknesses.length})
+        ${weaknessesLabel} (${result.weaknesses.length})
       </h3>
       ${weaknessesHtml}
     </div>
 
     <div style="margin-bottom: 20px;">
       <h3 style="color: #6366f1; border-bottom: 2px solid #6366f1; padding-bottom: 8px;">
-        Empfehlungen (${result.recommendations.length})
+        ${recommendationsLabel} (${result.recommendations.length})
       </h3>
       ${recommendationsHtml}
     </div>
 
     <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
       <p style="font-size: 12px; color: #999;">
-        Erstellt mit Sage GEO Agent | Powered by Claude Opus 4.5
+        ${footerText}
       </p>
     </div>
   `

@@ -1,6 +1,7 @@
 import { XCircle, AlertTriangle, Info } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useTranslation } from 'react-i18next'
 import type { Weakness } from '@/types'
 
 interface WeaknessesListProps {
@@ -8,10 +9,12 @@ interface WeaknessesListProps {
 }
 
 export function WeaknessesList({ weaknesses }: WeaknessesListProps) {
+  const { t } = useTranslation()
+
   if (weaknesses.length === 0) {
     return (
       <p className="text-muted-foreground text-center py-8">
-        Keine Schwaechen gefunden.
+        {t('weaknesses.empty')}
       </p>
     )
   }
@@ -64,7 +67,7 @@ export function WeaknessesList({ weaknesses }: WeaknessesListProps) {
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={getBadgeVariant(weakness.priority) as 'destructive' | 'warning' | 'secondary'}>
-                    {weakness.priority}
+                    {t(`priority.${weakness.priority}`)}
                   </Badge>
                   <h4 className="font-medium">{weakness.title}</h4>
                 </div>

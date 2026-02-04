@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { exportAsJSON, exportAsPDF } from '@/lib/exportUtils'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import type { AnalysisResult } from '@/types'
 
 interface ExportButtonProps {
@@ -16,14 +17,15 @@ interface ExportButtonProps {
 }
 
 export function ExportButton({ result }: ExportButtonProps) {
+  const { t } = useTranslation()
   const [isExporting, setIsExporting] = useState(false)
 
   const handleExportJSON = () => {
     try {
       exportAsJSON(result)
-      toast.success('JSON exportiert!')
+      toast.success(t('export.jsonSuccess'))
     } catch (error) {
-      toast.error('Export fehlgeschlagen')
+      toast.error(t('export.jsonFailed'))
     }
   }
 
@@ -31,9 +33,9 @@ export function ExportButton({ result }: ExportButtonProps) {
     setIsExporting(true)
     try {
       await exportAsPDF(result)
-      toast.success('PDF exportiert!')
+      toast.success(t('export.pdfSuccess'))
     } catch (error) {
-      toast.error('PDF-Export fehlgeschlagen')
+      toast.error(t('export.pdfFailed'))
     } finally {
       setIsExporting(false)
     }
@@ -49,18 +51,18 @@ export function ExportButton({ result }: ExportButtonProps) {
             <Download className="h-4 w-4" />
           )}
           <span className="ml-1 hidden sm:inline">
-            {isExporting ? 'Exportiere...' : 'Exportieren'}
+            {isExporting ? t('export.exporting') : t('export.export')}
           </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={handleExportJSON}>
           <FileJson className="h-4 w-4 mr-2" />
-          Als JSON
+          {t('export.asJson')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleExportPDF}>
           <FileText className="h-4 w-4 mr-2" />
-          Als PDF
+          {t('export.asPdf')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

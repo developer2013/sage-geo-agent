@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Bell,
   Plus,
@@ -56,6 +57,7 @@ interface Alert {
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export function ScoreMonitor() {
+  const { t, i18n } = useTranslation()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [monitoredUrls, setMonitoredUrls] = useState<MonitoredUrl[]>([])
@@ -111,7 +113,7 @@ export function ScoreMonitor() {
 
   const addUrl = async () => {
     if (!newUrl.trim()) {
-      setAddError('URL ist erforderlich')
+      setAddError(t('monitor.urlRequired'))
       return
     }
 
@@ -132,14 +134,14 @@ export function ScoreMonitor() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Fehler beim Hinzufügen')
+        throw new Error(data.error || t('monitor.addError'))
       }
 
       setNewUrl('')
       setNewName('')
       loadMonitoredUrls()
     } catch (error) {
-      setAddError(error instanceof Error ? error.message : 'Fehler beim Hinzufuegen')
+      setAddError(error instanceof Error ? error.message : t('monitor.addError'))
     } finally {
       setLoading(false)
     }
@@ -186,7 +188,7 @@ export function ScoreMonitor() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('de-DE', {
+    return date.toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'de-DE', {
       day: '2-digit',
       month: '2-digit',
       year: '2-digit',
@@ -226,7 +228,7 @@ export function ScoreMonitor() {
         </PopoverTrigger>
         <PopoverContent className="w-80" align="end">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium">Score-Alerts</h4>
+            <h4 className="font-medium">{t('monitor.scoreAlerts')}</h4>
             <Button variant="ghost" size="sm" onClick={() => setDialogOpen(true)}>
               <Settings className="h-4 w-4" />
             </Button>
@@ -234,7 +236,7 @@ export function ScoreMonitor() {
 
           {alerts.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Keine Alerts vorhanden
+              {t('monitor.noAlerts')}
             </p>
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -275,7 +277,7 @@ export function ScoreMonitor() {
               onClick={markAllSeen}
             >
               <Eye className="h-4 w-4 mr-1" />
-              Alle als gelesen markieren
+              {t('monitor.markAllRead')}
             </Button>
           )}
         </PopoverContent>
@@ -290,28 +292,28 @@ export function ScoreMonitor() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              Score-Monitoring
+              {t('monitor.scoreMonitoring')}
             </DialogTitle>
             <DialogDescription>
-              Ueberwache URLs und erhalte Alerts bei Score-Aenderungen.
+              {t('monitor.monitorDescription')}
             </DialogDescription>
           </DialogHeader>
 
           {/* Add URL Form */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">URL hinzufuegen</CardTitle>
+              <CardTitle className="text-base">{t('monitor.addUrl')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex gap-2">
                 <Input
-                  placeholder="URL (z.B. example.com/seite)"
+                  placeholder={t('monitor.urlPlaceholder')}
                   value={newUrl}
                   onChange={(e) => setNewUrl(e.target.value)}
                   className="flex-1"
                 />
                 <Input
-                  placeholder="Name (optional)"
+                  placeholder={t('monitor.namePlaceholder')}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-40"
@@ -332,12 +334,12 @@ export function ScoreMonitor() {
           {/* Monitored URLs List */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Ueberwachte URLs ({monitoredUrls.length})</CardTitle>
+              <CardTitle className="text-base">{t('monitor.monitoredUrls')} ({monitoredUrls.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {monitoredUrls.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Noch keine URLs zur Ueberwachung hinzugefuegt.
+                  {t('monitor.noMonitoredUrls')}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -362,7 +364,7 @@ export function ScoreMonitor() {
                         </div>
                         {item.lastChecked && (
                           <div className="text-xs text-muted-foreground">
-                            Letzte Pruefung: {formatDate(item.lastChecked)}
+                            {t('monitor.lastCheck')}: {formatDate(item.lastChecked)}
                           </div>
                         )}
                       </div>
@@ -390,11 +392,11 @@ export function ScoreMonitor() {
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Alert-Historie</CardTitle>
+                <CardTitle className="text-base">{t('monitor.alertHistory')}</CardTitle>
                 {unseenCount > 0 && (
                   <Button variant="ghost" size="sm" onClick={markAllSeen}>
                     <CheckCircle2 className="h-4 w-4 mr-1" />
-                    Alle gelesen
+                    {t('monitor.allRead')}
                   </Button>
                 )}
               </div>
@@ -402,8 +404,7 @@ export function ScoreMonitor() {
             <CardContent>
               {alerts.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Noch keine Alerts vorhanden. Alerts werden erstellt, wenn sich
-                  der Score einer ueberwachten URL um mehr als 5 Punkte aendert.
+                  {t('monitor.noAlertsDescription')}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -428,7 +429,7 @@ export function ScoreMonitor() {
                           <span className="text-muted-foreground mx-2">→</span>
                           <span className={getScoreColor(alert.newScore)}>{alert.newScore}</span>
                           <span className="text-muted-foreground ml-2">
-                            ({alert.change > 0 ? '+' : ''}{alert.change} Punkte)
+                            ({alert.change > 0 ? '+' : ''}{alert.change} {t('common.points')})
                           </span>
                         </div>
                       </div>

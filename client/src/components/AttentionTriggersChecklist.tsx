@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sparkles, Check, X } from 'lucide-react'
 import type { AttentionTrigger } from '@/types'
@@ -7,6 +8,7 @@ interface AttentionTriggersChecklistProps {
 }
 
 export function AttentionTriggersChecklist({ triggers }: AttentionTriggersChecklistProps) {
+  const { t } = useTranslation()
   const foundCount = triggers.filter(t => t.found).length
   const totalCount = triggers.length
 
@@ -44,7 +46,7 @@ export function AttentionTriggersChecklist({ triggers }: AttentionTriggersCheckl
             Attention Triggers
           </CardTitle>
           <span className={`text-sm font-medium ${foundCount >= 3 ? 'text-emerald-600' : foundCount >= 1 ? 'text-amber-600' : 'text-red-600'}`}>
-            {foundCount}/{totalCount} gefunden
+            {t('serp.triggersFound', { found: foundCount, total: totalCount })}
           </span>
         </div>
       </CardHeader>
@@ -74,8 +76,7 @@ export function AttentionTriggersChecklist({ triggers }: AttentionTriggersCheckl
           ))}
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Attention Triggers sind Keywords die in B2B-SERPs haeufig geklickt werden.
-          Je mehr Trigger in Title und Description vorkommen, desto hoeher die Click-Rate.
+          {t('serp.triggersInfo')}
         </p>
       </CardContent>
     </Card>

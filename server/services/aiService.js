@@ -10,6 +10,8 @@ import {
   getElapsed,
   formatSize
 } from '../utils/debugLogger.js'
+import SYSTEM_PROMPT_DE from './prompts/systemPromptDe.js'
+import SYSTEM_PROMPT_EN from './prompts/systemPromptEn.js'
 
 // Lazy initialization - ensures dotenv.config() has run before accessing API key
 let client = null
@@ -23,7 +25,8 @@ function getAnthropicClient() {
   return client
 }
 
-const SYSTEM_PROMPT = `# GEO Agent - Generative Engine Optimization Experte
+// System prompt extracted to prompts/systemPromptDe.js and prompts/systemPromptEn.js
+const _LEGACY_SYSTEM_PROMPT = `# GEO Agent - Generative Engine Optimization Experte
 
 ## Deine Identität und Mission
 Du bist ein hochspezialisierter Experte für Generative Engine Optimization (GEO), basierend auf der Princeton-Studie und aktuellen Forschungsergebnissen. Deine Mission ist es, Webseiten detailliert zu analysieren und konkrete, umsetzbare Verbesserungen vorzuschlagen.
@@ -294,7 +297,7 @@ Erlaubt sein sollten:
 - BreadcrumbList (Navigation)
 - Product + Review (Produkte)`
 
-export async function analyzeWithClaude(url, pageContent, pageCode, imageSettings = {}) {
+export async function analyzeWithClaude(url, pageContent, pageCode, imageSettings = {}, lang = 'de') {
   const timer = startTimer()
 
   // Default image settings
@@ -653,7 +656,7 @@ FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
           content: messageContent,
         }
       ],
-      system: SYSTEM_PROMPT,
+      system: lang === 'en' ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_DE,
     })
   } catch (apiError) {
     const duration = getElapsed(timer)

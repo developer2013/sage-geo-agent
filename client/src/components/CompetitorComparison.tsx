@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, X, Trophy, TrendingUp, TrendingDown, Loader2, BarChart3, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,6 +60,7 @@ interface ComparisonResult {
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export function CompetitorComparison() {
+  const { t } = useTranslation()
   const [urls, setUrls] = useState<string[]>(['', ''])
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ComparisonResult | null>(null)
@@ -87,7 +89,7 @@ export function CompetitorComparison() {
     const validUrls = urls.filter(u => u.trim() !== '')
 
     if (validUrls.length < 2) {
-      setError('Mindestens 2 URLs erforderlich')
+      setError(t('competitor.minUrlsRequired'))
       return
     }
 
@@ -104,13 +106,13 @@ export function CompetitorComparison() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Vergleich fehlgeschlagen')
+        throw new Error(data.error || t('competitor.comparisonFailed'))
       }
 
       const data = await response.json()
       setResult(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unbekannter Fehler')
+      setError(err instanceof Error ? err.message : t('common.unknown_error'))
     } finally {
       setLoading(false)
     }
@@ -123,10 +125,10 @@ export function CompetitorComparison() {
   }
 
   const getRankBadge = (rank: number) => {
-    if (rank === 1) return <Badge className="bg-yellow-500 text-white"><Trophy className="h-3 w-3 mr-1" />1. Platz</Badge>
-    if (rank === 2) return <Badge variant="secondary">2. Platz</Badge>
-    if (rank === 3) return <Badge variant="outline">3. Platz</Badge>
-    return <Badge variant="outline">{rank}. Platz</Badge>
+    if (rank === 1) return <Badge className="bg-yellow-500 text-white"><Trophy className="h-3 w-3 mr-1" />1. {t('competitor.place')}</Badge>
+    if (rank === 2) return <Badge variant="secondary">2. {t('competitor.place')}</Badge>
+    if (rank === 3) return <Badge variant="outline">3. {t('competitor.place')}</Badge>
+    return <Badge variant="outline">{rank}. {t('competitor.place')}</Badge>
   }
 
   const extractDomain = (url: string) => {
@@ -142,23 +144,23 @@ export function CompetitorComparison() {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <BarChart3 className="h-4 w-4" />
-          Wettbewerbs-Vergleich
+          {t('competitor.title')}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            Wettbewerbs-Vergleich
+            {t('competitor.title')}
           </DialogTitle>
           <DialogDescription>
-            Vergleiche bis zu 5 URLs und finde heraus, wer die beste GEO-Optimierung hat.
+            {t('competitor.description')}
           </DialogDescription>
         </DialogHeader>
 
         {/* URL Input Section */}
         <div className="space-y-3 mt-4">
-          <h4 className="text-sm font-medium">URLs zum Vergleich</h4>
+          <h4 className="text-sm font-medium">{t('competitor.urlsToCompare')}</h4>
           {urls.map((url, index) => (
             <div key={index} className="flex gap-2">
               <Input
@@ -184,17 +186,17 @@ export function CompetitorComparison() {
             {urls.length < 5 && (
               <Button variant="outline" size="sm" onClick={addUrl} disabled={loading}>
                 <Plus className="h-4 w-4 mr-1" />
-                URL hinzufuegen
+                {t('competitor.addUrl')}
               </Button>
             )}
             <Button onClick={runComparison} disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Analysiere...
+                  {t('common.analyzing')}
                 </>
               ) : (
-                'Vergleich starten'
+                t('competitor.startComparison')
               )}
             </Button>
           </div>
@@ -214,25 +216,25 @@ export function CompetitorComparison() {
             {/* Statistics Overview */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Uebersicht</CardTitle>
+                <CardTitle className="text-lg">{t('competitor.overview')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                   <div>
                     <div className="text-2xl font-bold text-green-600">{result.statistics.highest}</div>
-                    <div className="text-xs text-muted-foreground">Hoechster Score</div>
+                    <div className="text-xs text-muted-foreground">{t('competitor.highestScore')}</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold">{result.statistics.average}</div>
-                    <div className="text-xs text-muted-foreground">Durchschnitt</div>
+                    <div className="text-xs text-muted-foreground">{t('competitor.average')}</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-red-600">{result.statistics.lowest}</div>
-                    <div className="text-xs text-muted-foreground">Niedrigster Score</div>
+                    <div className="text-xs text-muted-foreground">{t('competitor.lowestScore')}</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold">{result.statistics.spread}</div>
-                    <div className="text-xs text-muted-foreground">Spanne</div>
+                    <div className="text-xs text-muted-foreground">{t('competitor.spread')}</div>
                   </div>
                 </div>
               </CardContent>
@@ -268,8 +270,8 @@ export function CompetitorComparison() {
                     </div>
                     <Progress value={ranking.geoScore} className="h-2" />
                     <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                      <span>{ranking.strengthCount} Staerken</span>
-                      <span>{ranking.weaknessCount} Schwaechen</span>
+                      <span>{ranking.strengthCount} {t('common.strengths')}</span>
+                      <span>{ranking.weaknessCount} {t('common.weaknesses')}</span>
                     </div>
                   </div>
                 ))}
@@ -282,7 +284,7 @@ export function CompetitorComparison() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-blue-500" />
-                    Was fehlt den anderen?
+                    {t('competitor.whatsMissing')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -292,11 +294,11 @@ export function CompetitorComparison() {
                         <span className="font-medium text-sm">{extractDomain(imp.url)}</span>
                         <Badge variant="outline" className="text-red-600">
                           <TrendingDown className="h-3 w-3 mr-1" />
-                          -{imp.scoreDiff} Punkte
+                          -{imp.scoreDiff} {t('common.points')}
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">Fehlende Staerken:</span>
+                        <span className="font-medium">{t('competitor.missingStrengths')}:</span>
                         <ul className="list-disc list-inside mt-1">
                           {imp.missingStrengths.slice(0, 3).map((strength, i) => (
                             <li key={i}>{strength}</li>
@@ -315,7 +317,7 @@ export function CompetitorComparison() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-amber-500" />
-                    Gemeinsame Schwaechen
+                    {t('competitor.commonWeaknesses')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -337,7 +339,7 @@ export function CompetitorComparison() {
             {result.failed.length > 0 && (
               <Card className="border-red-200 dark:border-red-800">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-red-600">Fehlgeschlagen</CardTitle>
+                  <CardTitle className="text-lg text-red-600">{t('competitor.failed')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-1 text-sm">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Loader2, Globe, Search, Brain, FileText } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface ProgressInfo {
   step: number
@@ -12,20 +13,24 @@ interface LoadingAnimationProps {
   progress?: ProgressInfo | null
 }
 
-const defaultSteps = [
-  { icon: Globe, text: 'Verbinde mit Webseite...', duration: 2000 },
-  { icon: Search, text: 'Scanne Inhalte mit Firecrawl...', duration: 3000 },
-  { icon: FileText, text: 'Extrahiere Struktur & Bilder...', duration: 2000 },
-  { icon: Brain, text: 'Analysiere mit Claude Opus 4.5...', duration: 8000 },
-]
+const stepIcons = [Globe, Search, FileText, Brain]
+const stepDurations = [2000, 3000, 2000, 8000]
 
 export function LoadingAnimation({ isLoading, progress }: LoadingAnimationProps) {
+  const { t } = useTranslation()
   const [animatedProgress, setAnimatedProgress] = useState(0)
   const [fallbackStep, setFallbackStep] = useState(0)
 
+  const defaultSteps = [
+    { icon: stepIcons[0], text: t('loading.connecting'), duration: stepDurations[0] },
+    { icon: stepIcons[1], text: t('loading.scanning'), duration: stepDurations[1] },
+    { icon: stepIcons[2], text: t('loading.extracting'), duration: stepDurations[2] },
+    { icon: stepIcons[3], text: t('loading.aiAnalyzing'), duration: stepDurations[3] },
+  ]
+
   // Use server progress if available, otherwise use animated fallback
   const currentStep = progress?.step ?? fallbackStep
-  const currentMessage = progress?.message ?? defaultSteps[fallbackStep]?.text ?? 'Analysiere...'
+  const currentMessage = progress?.message ?? defaultSteps[fallbackStep]?.text ?? t('loading.fallback')
 
   useEffect(() => {
     if (!isLoading) {
@@ -49,7 +54,7 @@ export function LoadingAnimation({ isLoading, progress }: LoadingAnimationProps)
     }
 
     // Fallback animation when no server progress
-    const totalDuration = defaultSteps.reduce((acc, step) => acc + step.duration, 0)
+    const totalDuration = stepDurations.reduce((acc, d) => acc + d, 0)
     let elapsed = 0
 
     const interval = setInterval(() => {
@@ -58,8 +63,8 @@ export function LoadingAnimation({ isLoading, progress }: LoadingAnimationProps)
       setAnimatedProgress(newProgress)
 
       let stepTime = 0
-      for (let i = 0; i < defaultSteps.length; i++) {
-        stepTime += defaultSteps[i].duration
+      for (let i = 0; i < stepDurations.length; i++) {
+        stepTime += stepDurations[i]
         if (elapsed < stepTime) {
           setFallbackStep(i)
           break
@@ -121,7 +126,7 @@ export function LoadingAnimation({ isLoading, progress }: LoadingAnimationProps)
           {/* Spinner Badge */}
           <div className="neu-badge flex items-center gap-2 text-sm text-muted-foreground px-4 py-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span>GEO-Analyse läuft...</span>
+            <span>{t('loading.running')}</span>
           </div>
         </div>
       </CardContent>

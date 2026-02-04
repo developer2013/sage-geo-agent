@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
+import { useTranslation } from 'react-i18next'
 
 export interface ImageSettings {
   includeScreenshot: boolean
@@ -19,6 +20,7 @@ interface UrlInputProps {
 }
 
 export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
+  const { t } = useTranslation()
   const [url, setUrl] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [imageSettings, setImageSettings] = useState<ImageSettings>({
@@ -48,7 +50,7 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
             </div>
             <Input
               type="text"
-              placeholder="URL eingeben (z.B. example.com)"
+              placeholder={t('urlInput.placeholder')}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="pl-14"
@@ -59,10 +61,10 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Analysiere...
+                {t('urlInput.analyzing')}
               </>
             ) : (
-              'Analysieren'
+              t('urlInput.analyze')
             )}
           </Button>
         </form>
@@ -75,7 +77,7 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Image className="h-4 w-4" />
-            Bild-Einstellungen
+            {t('urlInput.imageSettings')}
             {showSettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
 
@@ -86,7 +88,7 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
                 <div className="flex items-center gap-2">
                   <Camera className="h-4 w-4 text-muted-foreground" />
                   <Label htmlFor="screenshot-toggle" className="text-sm cursor-pointer">
-                    Screenshot analysieren
+                    {t('urlInput.screenshotToggle')}
                   </Label>
                 </div>
                 <Switch
@@ -104,7 +106,7 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
                 <div className="flex items-center gap-2">
                   <Image className="h-4 w-4 text-muted-foreground" />
                   <Label htmlFor="images-toggle" className="text-sm cursor-pointer">
-                    Bilder auf der Seite analysieren
+                    {t('urlInput.imagesToggle')}
                   </Label>
                 </div>
                 <Switch
@@ -121,7 +123,7 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
               {imageSettings.includeImages && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm">Max. Bilder: {imageSettings.maxImages}</Label>
+                    <Label className="text-sm">{t('urlInput.maxImages')}: {imageSettings.maxImages}</Label>
                     <span className="text-xs text-muted-foreground">(1-5)</span>
                   </div>
                   <Slider
@@ -139,14 +141,14 @@ export function UrlInput({ onAnalyze, isLoading }: UrlInputProps) {
               )}
 
               <p className="text-xs text-muted-foreground">
-                Mehr Bilder = detailliertere visuelle Analyse, aber hoehere Kosten und laengere Analysezeit.
+                {t('urlInput.imagesCostNote')}
               </p>
             </div>
           )}
         </div>
 
         <p className="text-xs text-muted-foreground mt-4">
-          Gib eine URL ein, um die GEO-Tauglichkeit zu analysieren. Die Analyse prueft Schema Markup, Meta-Tags, Struktur und mehr.
+          {t('urlInput.helperText')}
         </p>
       </CardContent>
     </Card>

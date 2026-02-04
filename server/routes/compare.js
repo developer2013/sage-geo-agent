@@ -21,13 +21,13 @@ router.post('/', async (req, res) => {
     // Validate input
     if (!urls || !Array.isArray(urls) || urls.length < 2) {
       return res.status(400).json({
-        error: 'Mindestens 2 URLs zum Vergleich erforderlich'
+        error: 'MIN_URLS_REQUIRED'
       })
     }
 
     if (urls.length > 5) {
       return res.status(400).json({
-        error: 'Maximal 5 URLs zum Vergleich erlaubt'
+        error: 'MAX_URLS_EXCEEDED'
       })
     }
 
@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
         validatedUrls.push(parsed.href)
       } catch {
         return res.status(400).json({
-          error: `Ungueltige URL: ${url}`
+          error: 'INVALID_URL'
         })
       }
     }
@@ -115,7 +115,7 @@ router.post('/', async (req, res) => {
 
     if (successfulAnalyses.length < 2) {
       return res.status(400).json({
-        error: 'Mindestens 2 URLs muessen erfolgreich analysiert werden',
+        error: 'MIN_URLS_REQUIRED',
         failed: failedAnalyses
       })
     }
@@ -237,7 +237,7 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('[Compare] Error:', error)
     res.status(500).json({
-      error: 'Vergleich fehlgeschlagen: ' + error.message
+      error: 'COMPARISON_FAILED'
     })
   }
 })

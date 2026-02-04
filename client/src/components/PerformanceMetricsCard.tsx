@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Gauge, Zap, LayoutGrid, HardDrive, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +9,8 @@ interface PerformanceMetricsCardProps {
 }
 
 export function PerformanceMetricsCard({ metrics }: PerformanceMetricsCardProps) {
+  const { t } = useTranslation()
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'fast':
@@ -25,12 +28,12 @@ export function PerformanceMetricsCard({ metrics }: PerformanceMetricsCardProps)
     switch (status) {
       case 'fast':
       case 'good':
-        return 'Gut'
+        return t('performance.statusGood')
       case 'moderate':
       case 'needs-improvement':
-        return 'Mittel'
+        return t('performance.statusModerate')
       default:
-        return 'Langsam'
+        return t('performance.statusSlow')
     }
   }
 
@@ -47,9 +50,9 @@ export function PerformanceMetricsCard({ metrics }: PerformanceMetricsCardProps)
           <div className="neu-icon p-2">
             <Gauge className="h-4 w-4 text-primary" />
           </div>
-          Performance-Hinweise
+          {t('performance.title')}
           <Badge variant="outline" className="ml-2 text-xs">
-            Geschaetzt
+            {t('performance.estimated')}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -58,14 +61,14 @@ export function PerformanceMetricsCard({ metrics }: PerformanceMetricsCardProps)
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="text-center p-3 rounded-xl bg-background shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]">
             <Zap className="h-5 w-5 mx-auto mb-2 text-primary" />
-            <div className="text-xs text-muted-foreground mb-1">LCP (Ladezeit)</div>
+            <div className="text-xs text-muted-foreground mb-1">{t('performance.lcpLabel')}</div>
             <Badge className={`${getStatusColor(metrics.estimatedLCP)} border`}>
               {getStatusLabel(metrics.estimatedLCP)}
             </Badge>
           </div>
           <div className="text-center p-3 rounded-xl bg-background shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]">
             <LayoutGrid className="h-5 w-5 mx-auto mb-2 text-primary" />
-            <div className="text-xs text-muted-foreground mb-1">CLS (Stabilitaet)</div>
+            <div className="text-xs text-muted-foreground mb-1">{t('performance.clsLabel')}</div>
             <Badge className={`${getStatusColor(metrics.estimatedCLS)} border`}>
               {getStatusLabel(metrics.estimatedCLS)}
             </Badge>
@@ -76,7 +79,7 @@ export function PerformanceMetricsCard({ metrics }: PerformanceMetricsCardProps)
         <div className="flex items-center gap-3 p-3 rounded-xl bg-background shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] mb-4">
           <HardDrive className="h-5 w-5 text-primary flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium">Geschaetzte Seitengroesse</div>
+            <div className="text-sm font-medium">{t('performance.estimatedPageSize')}</div>
             <div className="text-xs text-muted-foreground">
               HTML: {formatBytes(metrics.contentSize.html)} |
               Bilder: ~{formatBytes(metrics.contentSize.images)} |
@@ -90,7 +93,7 @@ export function PerformanceMetricsCard({ metrics }: PerformanceMetricsCardProps)
           <div className="space-y-2">
             <h4 className="text-sm font-medium flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              Optimierungsvorschlaege
+              {t('performance.optimizationSuggestions')}
             </h4>
             <div className="space-y-1">
               {metrics.suggestions.map((suggestion, index) => (
@@ -108,7 +111,7 @@ export function PerformanceMetricsCard({ metrics }: PerformanceMetricsCardProps)
 
         {metrics.suggestions.length === 0 && (
           <div className="text-sm text-muted-foreground text-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/10">
-            Keine offensichtlichen Performance-Probleme erkannt.
+            {t('performance.noIssues')}
           </div>
         )}
       </CardContent>
