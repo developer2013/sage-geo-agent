@@ -326,8 +326,9 @@ router.post('/stream', async (req, res) => {
       return
     }
 
-    // Check for cached analysis (unless force refresh)
-    if (!forceRefresh) {
+    // Check for cached analysis (unless force refresh or different language)
+    // Cached analyses don't store language, so skip cache for non-default language
+    if (!forceRefresh && lang === 'de') {
       sendProgress(1, progressMessages.checkCache)
       const cached = getRecentAnalysisByUrl(validUrl.href, 24)
       if (cached) {
@@ -480,8 +481,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'INVALID_URL' })
     }
 
-    // Check for cached analysis (unless force refresh)
-    if (!forceRefresh) {
+    // Check for cached analysis (unless force refresh or different language)
+    if (!forceRefresh && lang === 'de') {
       const cached = getRecentAnalysisByUrl(validUrl.href, 24)
       if (cached) {
         logSuccess('Analyze', 0, { 'Cache': 'Hit', 'URL': validUrl.hostname })

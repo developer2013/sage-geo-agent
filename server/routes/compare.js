@@ -16,7 +16,7 @@ const router = express.Router()
  */
 router.post('/', async (req, res) => {
   try {
-    const { urls, forceRefresh = false } = req.body
+    const { urls, forceRefresh = false, lang = 'de' } = req.body
 
     // Validate input
     if (!urls || !Array.isArray(urls) || urls.length < 2) {
@@ -48,8 +48,8 @@ router.post('/', async (req, res) => {
 
     // Analyze all URLs (use cache if available)
     const analysisPromises = validatedUrls.map(async (url) => {
-      // Check cache first
-      if (!forceRefresh) {
+      // Check cache first (skip for non-default language)
+      if (!forceRefresh && lang === 'de') {
         const cached = getRecentAnalysisByUrl(url, 24)
         if (cached) {
           console.log(`[Compare] Using cached analysis for: ${url}`)
@@ -61,7 +61,7 @@ router.post('/', async (req, res) => {
       console.log(`[Compare] Analyzing: ${url}`)
       try {
         const pageCode = await fetchPageContent(url)
-        const analysisResult = await analyzeWithClaude(url, null, pageCode)
+        const analysisResult = await analyzeWithClaude(url, null, pageCode, {}, lang)
 
         // Calculate basic content stats
         const $ = cheerio.load(pageCode.html)

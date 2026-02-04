@@ -344,111 +344,114 @@ export async function analyzeWithClaude(url, pageContent, pageCode, imageSetting
 
   // Build image analysis section
   const imgAnalysis = textContent.structureAnalysis.imageAnalysis
+  const isEn = lang === 'en'
   const imageAnalysisSection = imgAnalysis
     ? `
 ═══════════════════════════════════════════
-BILD-ANALYSE (Alt-Texte)
+${isEn ? 'IMAGE ANALYSIS (Alt Texts)' : 'BILD-ANALYSE (Alt-Texte)'}
 ═══════════════════════════════════════════
 
-**Bilder gesamt:** ${imgAnalysis.total || 0}
-**Mit Alt-Text:** ${imgAnalysis.withAlt || 0}
-**Ohne Alt-Text:** ${imgAnalysis.withoutAlt || 0}
+**${isEn ? 'Total images' : 'Bilder gesamt'}:** ${imgAnalysis.total || 0}
+**${isEn ? 'With alt text' : 'Mit Alt-Text'}:** ${imgAnalysis.withAlt || 0}
+**${isEn ? 'Without alt text' : 'Ohne Alt-Text'}:** ${imgAnalysis.withoutAlt || 0}
 
-**Vorhandene Alt-Texte:**
-${imgAnalysis.altTexts?.slice(0, 10).map(alt => `- "${alt}"`).join('\n') || 'Keine Alt-Texte gefunden'}
+**${isEn ? 'Existing alt texts' : 'Vorhandene Alt-Texte'}:**
+${imgAnalysis.altTexts?.slice(0, 10).map(alt => `- "${alt}"`).join('\n') || (isEn ? 'No alt texts found' : 'Keine Alt-Texte gefunden')}
 `
     : ''
 
-  const userMessage = `Analysiere diese Webseite für GEO (Generative Engine Optimization):
+  const ha = textContent.headingAnalysis
+  const sa = textContent.structureAnalysis
+
+  const userMessage = `${isEn ? 'Analyze this webpage for GEO (Generative Engine Optimization)' : 'Analysiere diese Webseite für GEO (Generative Engine Optimization)'}:
 
 URL: ${url}
 
 ═══════════════════════════════════════════
-GRUNDLEGENDE INFORMATIONEN
+${isEn ? 'BASIC INFORMATION' : 'GRUNDLEGENDE INFORMATIONEN'}
 ═══════════════════════════════════════════
 
-**Titel:** ${actualTitle || 'FEHLT!'}
-**H1:** ${textContent.h1 || 'KEINE H1 GEFUNDEN!'}
-**Meta-Description:** ${actualDescription || 'FEHLT!'}
+**${isEn ? 'Title' : 'Titel'}:** ${actualTitle || (isEn ? 'MISSING!' : 'FEHLT!')}
+**H1:** ${textContent.h1 || (isEn ? 'NO H1 FOUND!' : 'KEINE H1 GEFUNDEN!')}
+**Meta-Description:** ${actualDescription || (isEn ? 'MISSING!' : 'FEHLT!')}
 
 ═══════════════════════════════════════════
-ÜBERSCHRIFTEN-ANALYSE (${textContent.headingAnalysis.total} gefunden)
+${isEn ? `HEADING ANALYSIS (${ha.total} found)` : `ÜBERSCHRIFTEN-ANALYSE (${ha.total} gefunden)`}
 ═══════════════════════════════════════════
 
-**Verteilung:** H1: ${textContent.headingAnalysis.counts.h1}, H2: ${textContent.headingAnalysis.counts.h2}, H3: ${textContent.headingAnalysis.counts.h3}, H4: ${textContent.headingAnalysis.counts.h4}, H5: ${textContent.headingAnalysis.counts.h5}, H6: ${textContent.headingAnalysis.counts.h6}
+**${isEn ? 'Distribution' : 'Verteilung'}:** H1: ${ha.counts.h1}, H2: ${ha.counts.h2}, H3: ${ha.counts.h3}, H4: ${ha.counts.h4}, H5: ${ha.counts.h5}, H6: ${ha.counts.h6}
 
-**Hierarchie korrekt:** ${textContent.headingAnalysis.hasProperHierarchy ? 'JA (genau 1x H1 + H2s vorhanden)' : 'NEIN - Problem!'}
-**Mehrere H1:** ${textContent.headingAnalysis.multipleH1 ? 'JA - PROBLEM!' : 'Nein (gut)'}
-**Übersprungene Ebenen:** ${textContent.headingAnalysis.missingLevels.length > 0 ? textContent.headingAnalysis.missingLevels.join(', ') + ' - PROBLEM!' : 'Keine (gut)'}
-**Als Fragen formuliert:** ${textContent.headingAnalysis.questionsCount} von ${textContent.headingAnalysis.total} (${Math.round(textContent.headingAnalysis.questionsCount / textContent.headingAnalysis.total * 100) || 0}%)
+**${isEn ? 'Hierarchy correct' : 'Hierarchie korrekt'}:** ${ha.hasProperHierarchy ? (isEn ? 'YES (exactly 1x H1 + H2s present)' : 'JA (genau 1x H1 + H2s vorhanden)') : (isEn ? 'NO - Problem!' : 'NEIN - Problem!')}
+**${isEn ? 'Multiple H1' : 'Mehrere H1'}:** ${ha.multipleH1 ? (isEn ? 'YES - PROBLEM!' : 'JA - PROBLEM!') : (isEn ? 'No (good)' : 'Nein (gut)')}
+**${isEn ? 'Skipped levels' : 'Übersprungene Ebenen'}:** ${ha.missingLevels.length > 0 ? ha.missingLevels.join(', ') + (isEn ? ' - PROBLEM!' : ' - PROBLEM!') : (isEn ? 'None (good)' : 'Keine (gut)')}
+**${isEn ? 'Phrased as questions' : 'Als Fragen formuliert'}:** ${ha.questionsCount} ${isEn ? 'of' : 'von'} ${ha.total} (${Math.round(ha.questionsCount / ha.total * 100) || 0}%)
 
-**Alle Überschriften:**
-${formattedHeadings || 'Keine Überschriften gefunden'}
+**${isEn ? 'All headings' : 'Alle Überschriften'}:**
+${formattedHeadings || (isEn ? 'No headings found' : 'Keine Überschriften gefunden')}
 
 ═══════════════════════════════════════════
-CONTENT-STRUKTUR ANALYSE
+${isEn ? 'CONTENT STRUCTURE ANALYSIS' : 'CONTENT-STRUKTUR ANALYSE'}
 ═══════════════════════════════════════════
 
-**Wortanzahl:** ${textContent.structureAnalysis.wordCount} (Lesezeit: ~${textContent.structureAnalysis.estimatedReadTime} Min.)
-**TL;DR/Zusammenfassung:** ${textContent.structureAnalysis.hasTldr ? 'JA vorhanden' : 'NICHT vorhanden'}
-**Listen:** ${textContent.structureAnalysis.bulletLists} Aufzählungen, ${textContent.structureAnalysis.numberedLists} nummerierte Listen (${textContent.structureAnalysis.totalListItems} Items)
-**Tabellen:** ${textContent.structureAnalysis.tableCount}
-**Bilder:** ${textContent.structureAnalysis.hasImages}
-**Videos:** ${textContent.structureAnalysis.hasVideos}
+**${isEn ? 'Word count' : 'Wortanzahl'}:** ${sa.wordCount} (${isEn ? 'Reading time' : 'Lesezeit'}: ~${sa.estimatedReadTime} ${isEn ? 'min.' : 'Min.'})
+**TL;DR/${isEn ? 'Summary' : 'Zusammenfassung'}:** ${sa.hasTldr ? (isEn ? 'YES present' : 'JA vorhanden') : (isEn ? 'NOT present' : 'NICHT vorhanden')}
+**${isEn ? 'Lists' : 'Listen'}:** ${sa.bulletLists} ${isEn ? 'bullet lists' : 'Aufzählungen'}, ${sa.numberedLists} ${isEn ? 'numbered lists' : 'nummerierte Listen'} (${sa.totalListItems} Items)
+**${isEn ? 'Tables' : 'Tabellen'}:** ${sa.tableCount}
+**${isEn ? 'Images' : 'Bilder'}:** ${sa.hasImages}
+**Videos:** ${sa.hasVideos}
 
-**Statistiken/Zahlen gefunden:** ${textContent.structureAnalysis.statisticsCount} ${textContent.structureAnalysis.hasStatistics ? '' : '- KEINE STATISTIKEN!'}
-**Quellenangaben gefunden:** ${textContent.structureAnalysis.citationsCount} ${textContent.structureAnalysis.hasCitations ? '' : '- KEINE QUELLEN!'}
-**Externe Links:** ${textContent.structureAnalysis.externalLinksCount}
-**Aktuelle Jahreszahlen (2024/2025):** ${textContent.structureAnalysis.hasRecentData ? 'JA' : 'NEIN'}
+**${isEn ? 'Statistics/numbers found' : 'Statistiken/Zahlen gefunden'}:** ${sa.statisticsCount} ${sa.hasStatistics ? '' : (isEn ? '- NO STATISTICS!' : '- KEINE STATISTIKEN!')}
+**${isEn ? 'Source citations found' : 'Quellenangaben gefunden'}:** ${sa.citationsCount} ${sa.hasCitations ? '' : (isEn ? '- NO SOURCES!' : '- KEINE QUELLEN!')}
+**${isEn ? 'External links' : 'Externe Links'}:** ${sa.externalLinksCount}
+**${isEn ? 'Current year references (2024/2025)' : 'Aktuelle Jahreszahlen (2024/2025)'}:** ${sa.hasRecentData ? (isEn ? 'YES' : 'JA') : (isEn ? 'NO' : 'NEIN')}
 
-**Erster Absatz (Direct Answer Check - erste 80 Worte):**
+**${isEn ? 'First paragraph (Direct Answer Check - first 80 words)' : 'Erster Absatz (Direct Answer Check - erste 80 Worte)'}:**
 "${textContent.firstParagraph}"
 
 ═══════════════════════════════════════════
-AUTOR & E-E-A-T SIGNALE
+${isEn ? 'AUTHOR & E-E-A-T SIGNALS' : 'AUTOR & E-E-A-T SIGNALE'}
 ═══════════════════════════════════════════
 
-**Autor erkennbar:** ${textContent.authorInfo.hasAuthor ? 'JA' : 'NEIN'}
-**Autorname:** ${textContent.authorInfo.authorName || 'Nicht gefunden'}
-**Autor-Bio vorhanden:** ${textContent.authorInfo.hasAuthorBio ? 'JA' : 'NEIN'}
-**Publikationsdatum:** ${textContent.dateInfo.publishDate || 'Nicht gefunden'}
-**Aktualisierungsdatum:** ${textContent.dateInfo.modifiedDate || 'Nicht gefunden'}
+**${isEn ? 'Author identifiable' : 'Autor erkennbar'}:** ${textContent.authorInfo.hasAuthor ? (isEn ? 'YES' : 'JA') : (isEn ? 'NO' : 'NEIN')}
+**${isEn ? 'Author name' : 'Autorname'}:** ${textContent.authorInfo.authorName || (isEn ? 'Not found' : 'Nicht gefunden')}
+**${isEn ? 'Author bio present' : 'Autor-Bio vorhanden'}:** ${textContent.authorInfo.hasAuthorBio ? (isEn ? 'YES' : 'JA') : (isEn ? 'NO' : 'NEIN')}
+**${isEn ? 'Publication date' : 'Publikationsdatum'}:** ${textContent.dateInfo.publishDate || (isEn ? 'Not found' : 'Nicht gefunden')}
+**${isEn ? 'Last modified date' : 'Aktualisierungsdatum'}:** ${textContent.dateInfo.modifiedDate || (isEn ? 'Not found' : 'Nicht gefunden')}
 
 ═══════════════════════════════════════════
-TECHNISCHE ANALYSE
+${isEn ? 'TECHNICAL ANALYSIS' : 'TECHNISCHE ANALYSE'}
 ═══════════════════════════════════════════
 
-**Meta-Tags (${pageCode.metaTags.length} gefunden):**
-${pageCode.metaTags.slice(0, 15).map(t => `- ${t.name || t.property}: ${t.content?.substring(0, 80)}`).join('\n') || 'Keine Meta-Tags'}
+**Meta-Tags (${pageCode.metaTags.length} ${isEn ? 'found' : 'gefunden'}):**
+${pageCode.metaTags.slice(0, 15).map(t => `- ${t.name || t.property}: ${t.content?.substring(0, 80)}`).join('\n') || (isEn ? 'No meta tags' : 'Keine Meta-Tags')}
 
 **Schema Markup (JSON-LD):**
-${pageCode.schemaMarkup.length > 0 ? JSON.stringify(pageCode.schemaMarkup, null, 2).substring(0, 5000) : 'KEIN SCHEMA MARKUP GEFUNDEN!'}
+${pageCode.schemaMarkup.length > 0 ? JSON.stringify(pageCode.schemaMarkup, null, 2).substring(0, 5000) : (isEn ? 'NO SCHEMA MARKUP FOUND!' : 'KEIN SCHEMA MARKUP GEFUNDEN!')}
 
 **robots.txt:**
-${pageCode.robotsTxt ? pageCode.robotsTxt.substring(0, 800) : 'Keine robots.txt gefunden'}
+${pageCode.robotsTxt ? pageCode.robotsTxt.substring(0, 800) : (isEn ? 'No robots.txt found' : 'Keine robots.txt gefunden')}
 
-**KI-Crawler Status:**
-- Blockiert: ${blockedCrawlers.length > 0 ? blockedCrawlers.join(', ') : 'Keine'}
-- Erlaubt/Nicht blockiert: ${allowedCrawlers.length > 0 ? allowedCrawlers.join(', ') : 'Keine Angabe'}
+**${isEn ? 'AI Crawler Status' : 'KI-Crawler Status'}:**
+- ${isEn ? 'Blocked' : 'Blockiert'}: ${blockedCrawlers.length > 0 ? blockedCrawlers.join(', ') : (isEn ? 'None' : 'Keine')}
+- ${isEn ? 'Allowed/Not blocked' : 'Erlaubt/Nicht blockiert'}: ${allowedCrawlers.length > 0 ? allowedCrawlers.join(', ') : (isEn ? 'Not specified' : 'Keine Angabe')}
 
-**Meta Robots Directives:** ${pageCode.robotsMeta ? formatRobotsMeta(pageCode.robotsMeta) : 'Keine gefunden'}
+**Meta Robots Directives:** ${pageCode.robotsMeta ? formatRobotsMeta(pageCode.robotsMeta) : (isEn ? 'None found' : 'Keine gefunden')}
 
 ${imageAnalysisSection}
 
 ═══════════════════════════════════════════
-FAQ-ELEMENTE (${textContent.faqItems.length} gefunden)
+${isEn ? `FAQ ELEMENTS (${textContent.faqItems.length} found)` : `FAQ-ELEMENTE (${textContent.faqItems.length} gefunden)`}
 ═══════════════════════════════════════════
-${textContent.faqItems.length > 0 ? textContent.faqItems.slice(0, 10).join('\n') : 'Keine FAQ-Elemente gefunden'}
+${textContent.faqItems.length > 0 ? textContent.faqItems.slice(0, 10).join('\n') : (isEn ? 'No FAQ elements found' : 'Keine FAQ-Elemente gefunden')}
 
 ═══════════════════════════════════════════
-CONTENT-AUSZUG
+${isEn ? 'CONTENT EXCERPT' : 'CONTENT-AUSZUG'}
 ═══════════════════════════════════════════
 ${textContent.bodyText.substring(0, 3000)}
 
 ═══════════════════════════════════════════
 
-Analysiere diese Daten und gib deine Bewertung als REINES JSON zurück (kein Markdown, kein Text davor/danach).
-Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert werden sollten, fehlende Elemente, etc.`
+${isEn ? 'Analyze this data and return your assessment as PURE JSON (no Markdown, no text before/after).\nBe specific in recommendations - name specific headings that should be changed, missing elements, etc.' : 'Analysiere diese Daten und gib deine Bewertung als REINES JSON zurück (kein Markdown, kein Text davor/danach).\nSei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert werden sollten, fehlende Elemente, etc.'}`
 
   // Helper to clean and validate base64 data
   function cleanBase64(data) {
@@ -622,7 +625,26 @@ Sei konkret bei Empfehlungen - nenne spezifische Überschriften die geändert we
   if (hasVisualContent) {
     messageContent.push({
       type: 'text',
-      text: `
+      text: isEn ? `
+
+═══════════════════════════════════════════
+VISUAL ANALYSIS (YOU CAN SEE THE IMAGES!)
+═══════════════════════════════════════════
+
+The images above show you the actual webpage. You CAN and SHOULD analyze them visually:
+
+1. **Extract text from images** - Read EVERY visible text in graphics, banners, screenshots
+2. **Describe hero area** - What does the user see first? What message?
+3. **Statistics in graphics** - Identify numbers in charts, diagrams, infographics
+4. **Evaluate UI/UX** - Are buttons clear? Navigation intuitive? CTAs visible?
+5. **Design quality** - Professional? Trustworthy? Modern?
+6. **Accessibility** - Sufficient contrast? Text readable?
+
+FILL the "imageAnalysis" field with your visual findings:
+- hasVisualContent: true
+- textInImages: "All recognized texts from the images"
+- accessibilityIssues: ["Found issues"]
+- recommendations: ["Visual improvement suggestions"]` : `
 
 ═══════════════════════════════════════════
 VISUELLE ANALYSE (DU SIEHST DIE BILDER!)
