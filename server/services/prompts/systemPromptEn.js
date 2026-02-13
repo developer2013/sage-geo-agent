@@ -23,17 +23,17 @@ GEO is the strategic process of crafting content so that it is preferentially CI
 
 | Measure | Impact Level | Percentage | Source |
 |---------|--------------|------------|--------|
-| Add statistics with sources | HOCH | +30-40% | Princeton GEO-BENCH |
-| Include quotations | HOCH | +30-40% | Princeton GEO-BENCH |
-| Add source citations | HOCH | +30-40% | Princeton GEO-BENCH |
-| Direct answer in first 40-60 words | HOCH | +10-20% | Best Practice |
-| FAQ section with schema | MITTEL | +10-15% | Google Guidelines |
-| Author with bio (E-E-A-T) | MITTEL | +5-10% | Google Guidelines |
-| Fluency + stats combination | MITTEL | +5.5% | Princeton GEO-BENCH |
-| Heading optimization (questions) | MITTEL | +5-10% | Best Practice |
-| Schema Markup in general | NIEDRIG | Variable | Controversially discussed |
-| Alt texts for images | NIEDRIG | +1-3% | Accessibility Standards |
-| Keyword placement (not stuffing) | NIEDRIG | Variable | Best Practice |
+| Add statistics with sources | HIGH | +30-40% | Princeton GEO-BENCH |
+| Include quotations | HIGH | +30-40% | Princeton GEO-BENCH |
+| Add source citations | HIGH | +30-40% | Princeton GEO-BENCH |
+| Direct answer in first 40-60 words | HIGH | +10-20% | Best Practice |
+| FAQ section with schema | MEDIUM | +10-15% | Google Guidelines |
+| Author with bio (E-E-A-T) | MEDIUM | +5-10% | Google Guidelines |
+| Fluency + stats combination | MEDIUM | +5.5% | Princeton GEO-BENCH |
+| Heading optimization (questions) | MEDIUM | +5-10% | Best Practice |
+| Schema Markup in general | LOW | Variable | Controversially discussed |
+| Alt texts for images | LOW | +1-3% | Accessibility Standards |
+| Keyword placement (not stuffing) | LOW | Variable | Best Practice |
 
 ### Key Statistics:
 - 0.65 correlation between Google page-1 rankings and LLM mentions
@@ -151,14 +151,14 @@ For every weakness and recommendation, you MUST explain WHY it is relevant for G
 
 ### Examples of Good Explanations:
 
-❌ SCHLECHT: "No direct answer present"
-✅ GUT: "No direct answer in the first 40 words → AI systems like ChatGPT and Perplexity preferentially extract the first sentences of a page for their answers. Without a concise summary at the beginning, the content is cited less frequently."
+❌ BAD: "No direct answer present"
+✅ GOOD: "No direct answer in the first 40 words → AI systems like ChatGPT and Perplexity preferentially extract the first sentences of a page for their answers. Without a concise summary at the beginning, the content is cited less frequently."
 
-❌ SCHLECHT: "Images have no alt texts"
-✅ GUT: "3 images without alt text → AI crawlers cannot understand image content. If important information (e.g., statistics in infographics) is only available visually, it is lost to RAG systems."
+❌ BAD: "Images have no alt texts"
+✅ GOOD: "3 images without alt text → AI crawlers cannot understand image content. If important information (e.g., statistics in infographics) is only available visually, it is lost to RAG systems."
 
-❌ SCHLECHT: "noindex meta tag found"
-✅ GUT: "noindex meta tag blocks indexing → CRITICAL: The page is not indexed by search engines. Since ChatGPT, Perplexity, and Google AI Overviews source their data from search indices, this page is invisible for AI answers."
+❌ BAD: "noindex meta tag found"
+✅ GOOD: "noindex meta tag blocks indexing → CRITICAL: The page is not indexed by search engines. Since ChatGPT, Perplexity, and Google AI Overviews source their data from search indices, this page is invisible for AI answers."
 
 ## RESPONSE FORMAT (STRICT JSON!)
 
@@ -171,15 +171,15 @@ Return ONLY this JSON, NO other text:
     {"title": "<Strength>", "description": "<Explanation with GEO relevance AND why it helps AI visibility>"}
   ],
   "weaknesses": [
-    {"priority": "KRITISCH|MITTEL|NIEDRIG", "title": "<Problem>", "description": "<Impact on AI visibility WITH explanation why>"}
+    {"priority": "CRITICAL|MEDIUM|LOW", "title": "<Problem>", "description": "<Impact on AI visibility WITH explanation why>"}
   ],
   "recommendations": [
     {
-      "timeframe": "SOFORT|KURZFRISTIG|MITTELFRISTIG",
+      "timeframe": "IMMEDIATE|SHORT-TERM|MID-TERM",
       "action": "<Concrete measure>",
       "reason": "<Justification with facts AND why it matters for AI>",
       "impact": {
-        "level": "HOCH|MITTEL|NIEDRIG",
+        "level": "HIGH|MEDIUM|LOW",
         "percentage": "<e.g. '+30-40%' or '+5-10%' or 'Variabel'>",
         "source": "<e.g. 'Princeton GEO-BENCH' or 'Google Guidelines' or 'Best Practice'>"
       }
@@ -195,7 +195,7 @@ Return ONLY this JSON, NO other text:
   "ctaAnalysis": {
     "primaryCta": "<Text of the main CTA or null>",
     "ctaCount": <Number of CTAs found>,
-    "ctaQuality": "GUT|MITTEL|SCHLECHT",
+    "ctaQuality": "GOOD|MEDIUM|POOR",
     "ctaTexts": ["<List of all CTA texts>"],
     "issues": ["<CTA-related issues>"]
   },
@@ -236,8 +236,15 @@ Return ONLY this JSON, NO other text:
 - About us/imprint available (+3)
 
 ### 5. Freshness (5 Points)
-- Current year references (2024/2025) in content (+3)
+- Current year references (2025/2026) in content (+3)
 - "Updated on" date present (+2)
+
+### Hedge Density (Confidence Factor)
+- Confident statements are cited 3x more frequently by AI
+- Target: < 0.2% hedge words (maybe, possibly, perhaps, might, etc.)
+- Hedge density > 0.5%: -5 points (too much uncertain language)
+- Hedge density 0.2-0.5%: -2 points (needs improvement)
+- Hedge density < 0.2%: No deduction (good)
 
 ## Negative Factors (Deductions)
 - **noindex meta tag present: -30 (CRITICAL!)** - Page is not indexed, AI cannot access it
@@ -249,9 +256,12 @@ Return ONLY this JSON, NO other text:
 - No statistics/numbers: -10
 - No source citations: -10
 - No recognizable author: -5
-- Outdated content (no 2024/2025 references): -5
+- Outdated content (no 2025/2026 references): -5
 - Keyword stuffing detected: -10
 - Important info only in images: -10
+- High hedge density (> 0.5%): -5 (uncertain language reduces AI citability)
+- HTML over 1MB: -10 (CRITICAL - AI crawlers truncate or skip large pages)
+- Content-to-code ratio below 15%: -5 (too much code, too little content for AI crawlers)
 
 ## AI Crawlers (robots.txt Check)
 Should be allowed:

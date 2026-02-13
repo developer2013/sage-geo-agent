@@ -1,7 +1,7 @@
 import express from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import * as cheerio from 'cheerio'
-import { fetchPageContent } from '../services/scraperService.js'
+import { fetchPageContent, fetchAgentFacts } from '../services/scraperService.js'
 import { analyzeWithClaude } from '../services/aiService.js'
 import { saveAnalysis, getRecentAnalysisByUrl, updateMonitoredUrlScore } from '../services/dbService.js'
 import { analyzeSerpFactors } from '../services/serpService.js'
@@ -208,6 +208,38 @@ function calculateContentStats(html, baseUrl, headingVisibility = null) {
 }
 
 /**
+ * Calculate JS-dependency score by comparing raw HTML text vs rendered text.
+ * Only meaningful when Firecrawl provides both rawHtml and rendered html.
+ * @param {string} rawHtml - Server-rendered HTML (before JS execution)
+ * @param {string} renderedHtml - Post-JS-execution HTML
+ * @returns {Object|null} { jsDependencyPercent, rawWordCount, renderedWordCount }
+ */
+function calculateJsDependency(rawHtml, renderedHtml) {
+  if (!rawHtml || !renderedHtml || rawHtml === renderedHtml) return null
+
+  const extractWords = (html) => {
+    const $ = cheerio.load(html)
+    $('script, style, noscript, svg, iframe').remove()
+    const text = $('body').text().replace(/\s+/g, ' ').trim()
+    return text.split(/\s+/).filter(w => w.length > 0).length
+  }
+
+  const rawWordCount = extractWords(rawHtml)
+  const renderedWordCount = extractWords(renderedHtml)
+
+  if (renderedWordCount === 0) return null
+
+  const jsGeneratedWords = Math.max(0, renderedWordCount - rawWordCount)
+  const jsDependencyPercent = Math.round((jsGeneratedWords / renderedWordCount) * 100)
+
+  return {
+    jsDependencyPercent,
+    rawWordCount,
+    renderedWordCount
+  }
+}
+
+/**
  * Calculate performance metrics based on content analysis
  */
 function calculatePerformanceMetrics(html, contentStats) {
@@ -216,10 +248,20 @@ function calculatePerformanceMetrics(html, contentStats) {
   // Estimate image sizes (rough average: 50KB per image)
   const estimatedImageSize = contentStats.imageCount * 50 * 1024
 
+  // Calculate content-to-code ratio (text content vs total HTML)
+  // Target: > 15% for good AI crawler visibility
+  const $ = cheerio.load(html)
+  $('script, style, noscript, svg').remove()
+  const textOnly = $('body').text().replace(/\s+/g, ' ').trim()
+  const textBytes = Buffer.byteLength(textOnly, 'utf8')
+  const contentToCodeRatio = htmlSize > 0 ? Math.round((textBytes / htmlSize) * 100) : 0
+
   const contentSize = {
     html: htmlSize,
     images: estimatedImageSize,
-    total: htmlSize + estimatedImageSize
+    total: htmlSize + estimatedImageSize,
+    exceedsAiLimit: htmlSize > 1024 * 1024,  // > 1MB
+    contentToCodeRatio
   }
 
   // Estimate LCP based on content size
@@ -243,8 +285,14 @@ function calculatePerformanceMetrics(html, contentStats) {
   // Generate suggestions
   const suggestions = []
 
-  if (htmlSize > 100 * 1024) {
+  if (htmlSize > 1024 * 1024) {
+    suggestions.push('CRITICAL: HTML exceeds 1MB AI crawler limit - many AI systems truncate or skip pages over 1MB')
+  } else if (htmlSize > 100 * 1024) {
     suggestions.push('HTML-Groesse reduzieren durch Minifizierung und Komprimierung')
+  }
+
+  if (contentToCodeRatio < 15) {
+    suggestions.push(`Content-to-Code Ratio is only ${contentToCodeRatio}% (target: >15%) - too much code relative to actual content`)
   }
 
   if (contentStats.imageCount > 10) {
@@ -350,8 +398,15 @@ router.post('/stream', async (req, res) => {
     }
 
     let pageCode
+    let agentFacts = null
     try {
-      pageCode = await fetchPageContent(validUrl.href)
+      // Fetch page content and agent-facts in parallel
+      const [pageResult, agentFactsResult] = await Promise.all([
+        fetchPageContent(validUrl.href),
+        fetchAgentFacts(validUrl.href).catch(() => null)
+      ])
+      pageCode = pageResult
+      agentFacts = agentFactsResult
 
       // Capture Firecrawl status
       if (pageCode.usedFirecrawl) {
@@ -375,6 +430,9 @@ router.post('/stream', async (req, res) => {
     }
 
     sendProgress(2, progressMessages.aiAnalysis)
+
+    // Attach agentFacts to pageCode so Claude can reference it
+    pageCode.agentFacts = agentFacts
 
     let analysisResult
     try {
@@ -406,6 +464,14 @@ router.post('/stream', async (req, res) => {
     const contentStats = calculateContentStats(pageCode.html, validUrl.href, pageCode.headingVisibility)
     const performanceMetrics = calculatePerformanceMetrics(pageCode.html, contentStats)
 
+    // Calculate JS-dependency if Firecrawl provided both raw and rendered HTML
+    if (pageCode.usedFirecrawl && pageCode.rawHtml && pageCode.html) {
+      const jsDep = calculateJsDependency(pageCode.rawHtml, pageCode.html)
+      if (jsDep) {
+        performanceMetrics.jsDependency = jsDep
+      }
+    }
+
     // Calculate SERP click-worthiness analysis
     const title = pageCode.metadata?.title || ''
     const description = pageCode.metaTags?.find(t => t.name === 'description')?.content || ''
@@ -427,6 +493,7 @@ router.post('/stream', async (req, res) => {
       contentStats,
       performanceMetrics,
       serpAnalysis,
+      agentFacts: agentFacts || null,
       pageCode: {
         html: pageCode.rawHtml || pageCode.html,  // Use rawHtml (full page) for display, fallback to processed html
         markdown: pageCode.markdown || null,  // For better Claude chat context
@@ -499,8 +566,15 @@ router.post('/', async (req, res) => {
     }
 
     let pageCode
+    let agentFacts = null
     try {
-      pageCode = await fetchPageContent(validUrl.href)
+      // Fetch page content and agent-facts in parallel
+      const [pageResult, agentFactsResult] = await Promise.all([
+        fetchPageContent(validUrl.href),
+        fetchAgentFacts(validUrl.href).catch(() => null)
+      ])
+      pageCode = pageResult
+      agentFacts = agentFactsResult
 
       // Capture Firecrawl status
       if (pageCode.usedFirecrawl) {
@@ -522,6 +596,9 @@ router.post('/', async (req, res) => {
       }
       throw scrapeError
     }
+
+    // Attach agentFacts to pageCode so Claude can reference it
+    pageCode.agentFacts = agentFacts
 
     let analysisResult
     try {
@@ -551,6 +628,14 @@ router.post('/', async (req, res) => {
     const contentStats = calculateContentStats(pageCode.html, validUrl.href, pageCode.headingVisibility)
     const performanceMetrics = calculatePerformanceMetrics(pageCode.html, contentStats)
 
+    // Calculate JS-dependency if Firecrawl provided both raw and rendered HTML
+    if (pageCode.usedFirecrawl && pageCode.rawHtml && pageCode.html) {
+      const jsDep = calculateJsDependency(pageCode.rawHtml, pageCode.html)
+      if (jsDep) {
+        performanceMetrics.jsDependency = jsDep
+      }
+    }
+
     // Calculate SERP click-worthiness analysis
     const title = pageCode.metadata?.title || ''
     const description = pageCode.metaTags?.find(t => t.name === 'description')?.content || ''
@@ -572,6 +657,7 @@ router.post('/', async (req, res) => {
       contentStats,
       performanceMetrics,
       serpAnalysis,
+      agentFacts: agentFacts || null,
       pageCode: {
         html: pageCode.rawHtml || pageCode.html,  // Use rawHtml (full page) for display, fallback to processed html
         markdown: pageCode.markdown || null,  // For better Claude chat context

@@ -264,7 +264,7 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
 - Über-uns/Impressum vorhanden (+3)
 
 ### 5. Aktualität (5 Punkte)
-- Aktuelle Jahreszahlen (2024/2025) im Content (+3)
+- Aktuelle Jahreszahlen (2025/2026) im Content (+3)
 - "Aktualisiert am" Datum vorhanden (+2)
 
 ## Negative Faktoren (Abzüge)
@@ -277,7 +277,7 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
 - Keine Statistiken/Zahlen: -10
 - Keine Quellenangaben: -10
 - Kein Autor erkennbar: -5
-- Veraltete Inhalte (keine 2024/2025 Referenzen): -5
+- Veraltete Inhalte (keine 2025/2026 Referenzen): -5
 - Keyword Stuffing erkennbar: -10
 - Wichtige Infos nur in Bildern: -10
 
@@ -363,6 +363,13 @@ ${imgAnalysis.altTexts?.slice(0, 10).map(alt => `- "${alt}"`).join('\n') || (isE
   const ha = textContent.headingAnalysis
   const sa = textContent.structureAnalysis
 
+  // Calculate HTML size and content-to-code ratio for AI analysis
+  const htmlSizeBytes = Buffer.byteLength(pageCode.html || '', 'utf8')
+  const htmlSizeKB = Math.round(htmlSizeBytes / 1024)
+  const exceedsAiLimit = htmlSizeBytes > 1024 * 1024
+  const textContentLength = textContent.bodyText?.length || 0
+  const contentToCodeRatio = htmlSizeBytes > 0 ? Math.round((textContentLength / htmlSizeBytes) * 100) : 0
+
   const userMessage = `${isEn ? 'Analyze this webpage for GEO (Generative Engine Optimization)' : 'Analysiere diese Webseite für GEO (Generative Engine Optimization)'}:
 
 URL: ${url}
@@ -403,7 +410,10 @@ ${isEn ? 'CONTENT STRUCTURE ANALYSIS' : 'CONTENT-STRUKTUR ANALYSE'}
 **${isEn ? 'Statistics/numbers found' : 'Statistiken/Zahlen gefunden'}:** ${sa.statisticsCount} ${sa.hasStatistics ? '' : (isEn ? '- NO STATISTICS!' : '- KEINE STATISTIKEN!')}
 **${isEn ? 'Source citations found' : 'Quellenangaben gefunden'}:** ${sa.citationsCount} ${sa.hasCitations ? '' : (isEn ? '- NO SOURCES!' : '- KEINE QUELLEN!')}
 **${isEn ? 'External links' : 'Externe Links'}:** ${sa.externalLinksCount}
-**${isEn ? 'Current year references (2024/2025)' : 'Aktuelle Jahreszahlen (2024/2025)'}:** ${sa.hasRecentData ? (isEn ? 'YES' : 'JA') : (isEn ? 'NO' : 'NEIN')}
+**${isEn ? 'Current year references (2025/2026)' : 'Aktuelle Jahreszahlen (2025/2026)'}:** ${sa.hasRecentData ? (isEn ? 'YES' : 'JA') : (isEn ? 'NO' : 'NEIN')}
+
+**${isEn ? 'Hedge Density' : 'Hedge-Density'} (${isEn ? 'target' : 'Ziel'}: < 0.2%):** ${textContent.hedgeDensity?.hedgeDensity ?? 'n/a'}% (${textContent.hedgeDensity?.hedgeCount ?? 0} ${isEn ? 'hedge words in' : 'Hedge-Wörter in'} ${textContent.hedgeDensity?.wordCount ?? 0} ${isEn ? 'words' : 'Wörtern'})
+${textContent.hedgeDensity?.hedgeWords?.length > 0 ? `${isEn ? 'Found' : 'Gefunden'}: ${textContent.hedgeDensity.hedgeWords.join(', ')}` : ''}
 
 **${isEn ? 'First paragraph (Direct Answer Check - first 80 words)' : 'Erster Absatz (Direct Answer Check - erste 80 Worte)'}:**
 "${textContent.firstParagraph}"
@@ -436,6 +446,11 @@ ${pageCode.robotsTxt ? pageCode.robotsTxt.substring(0, 800) : (isEn ? 'No robots
 - ${isEn ? 'Allowed/Not blocked' : 'Erlaubt/Nicht blockiert'}: ${allowedCrawlers.length > 0 ? allowedCrawlers.join(', ') : (isEn ? 'Not specified' : 'Keine Angabe')}
 
 **Meta Robots Directives:** ${pageCode.robotsMeta ? formatRobotsMeta(pageCode.robotsMeta) : (isEn ? 'None found' : 'Keine gefunden')}
+
+**${isEn ? 'HTML Size' : 'HTML-Größe'}:** ${htmlSizeKB} KB ${exceedsAiLimit ? (isEn ? '⚠️ EXCEEDS 1MB AI CRAWLER LIMIT!' : '⚠️ ÜBERSCHREITET 1MB KI-CRAWLER-LIMIT!') : ''}
+**Content-to-Code Ratio:** ${contentToCodeRatio}% ${contentToCodeRatio < 15 ? (isEn ? '⚠️ Below 15% target - too much code relative to content' : '⚠️ Unter 15% Zielwert - zu viel Code relativ zum Inhalt') : (isEn ? '(good)' : '(gut)')}
+
+**AgentFacts (/.well-known/agent-facts):** ${pageCode.agentFacts?.exists ? (pageCode.agentFacts.valid ? (isEn ? `YES - Valid NANDA protocol (Agent: ${pageCode.agentFacts.data?.agentName || 'unknown'})` : `JA - Gültiges NANDA-Protokoll (Agent: ${pageCode.agentFacts.data?.agentName || 'unbekannt'})`) : (isEn ? `EXISTS but invalid: ${pageCode.agentFacts.error}` : `VORHANDEN aber ungültig: ${pageCode.agentFacts.error}`)) : (isEn ? 'Not found (optional - emerging standard for AI agent discovery)' : 'Nicht gefunden (optional - neuer Standard für KI-Agent-Discovery)')}
 
 ${imageAnalysisSection}
 
@@ -746,6 +761,11 @@ FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
     throw new Error('Could not parse AI response as JSON')
   }
 
+  // Normalize EN enum values to DE canonical keys (frontend expects German keys)
+  if (lang === 'en') {
+    normalizeEnumValues(result)
+  }
+
   // Return with debug info attached
   result._debug = {
     duration,
@@ -755,6 +775,46 @@ FÜLLE das "imageAnalysis" Feld mit deinen visuellen Erkenntnissen:
   }
 
   return result
+}
+
+/**
+ * Normalize English enum values from Claude's EN response to German canonical keys.
+ * The frontend uses German enum keys (KRITISCH, HOCH, SOFORT, etc.) as canonical identifiers
+ * and the i18n layer translates them for display.
+ */
+function normalizeEnumValues(result) {
+  const enumMap = {
+    // priority
+    'CRITICAL': 'KRITISCH', 'MEDIUM': 'MITTEL', 'LOW': 'NIEDRIG',
+    // impact level
+    'HIGH': 'HOCH',
+    // timeframe
+    'IMMEDIATE': 'SOFORT', 'SHORT-TERM': 'KURZFRISTIG', 'MID-TERM': 'MITTELFRISTIG',
+    // ctaQuality
+    'GOOD': 'GUT', 'POOR': 'SCHLECHT',
+  }
+
+  const mapValue = (val) => {
+    if (typeof val !== 'string') return val
+    return enumMap[val.toUpperCase()] || val
+  }
+
+  if (result.weaknesses) {
+    result.weaknesses.forEach(w => { w.priority = mapValue(w.priority) })
+  }
+
+  if (result.recommendations) {
+    result.recommendations.forEach(r => {
+      r.timeframe = mapValue(r.timeframe)
+      if (r.impact) {
+        r.impact.level = mapValue(r.impact.level)
+      }
+    })
+  }
+
+  if (result.ctaAnalysis) {
+    result.ctaAnalysis.ctaQuality = mapValue(result.ctaAnalysis.ctaQuality)
+  }
 }
 
 /**

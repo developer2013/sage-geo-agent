@@ -309,7 +309,7 @@ export function extractTextContent(html, headingVisibility = null) {
     // Count statistics and numbers in content
     const statisticsMatches = bodyText.match(/\d+[\.,]?\d*\s*(%|prozent|percent|million|mio|milliarden|billion|euro|dollar|\$|€)/gi) || []
     const yearReferences = bodyText.match(/\b(20[2-3]\d|19\d{2})\b/g) || []
-    const hasRecentYear = yearReferences.some(y => parseInt(y) >= 2024)
+    const hasRecentYear = yearReferences.some(y => parseInt(y) >= 2025)
 
     // Check for citations and sources
     const citationPatterns = bodyText.match(/(laut|according to|quelle|source|studie|study|research|forschung|bericht|report)[\s:]+[A-Z][a-zA-ZäöüÄÖÜß\s]+/gi) || []
@@ -410,6 +410,9 @@ export function extractTextContent(html, headingVisibility = null) {
       imageAnalysis
     }
 
+    // Calculate hedge density
+    const hedgeDensity = calculateHedgeDensity(bodyText)
+
     // Return early with browser-based heading data
     return {
       title,
@@ -422,7 +425,8 @@ export function extractTextContent(html, headingVisibility = null) {
       firstParagraph: firstParagraphWords,
       authorInfo,
       dateInfo,
-      structureAnalysis
+      structureAnalysis,
+      hedgeDensity
     }
   }
 
@@ -550,7 +554,7 @@ export function extractTextContent(html, headingVisibility = null) {
   // Count statistics and numbers in content
   const statisticsMatches = bodyText.match(/\d+[\.,]?\d*\s*(%|prozent|percent|million|mio|milliarden|billion|euro|dollar|\$|€)/gi) || []
   const yearReferences = bodyText.match(/\b(20[2-3]\d|19\d{2})\b/g) || []
-  const hasRecentYear = yearReferences.some(y => parseInt(y) >= 2024)
+  const hasRecentYear = yearReferences.some(y => parseInt(y) >= 2025)
 
   // Check for citations and sources
   const citationPatterns = bodyText.match(/(laut|according to|quelle|source|studie|study|research|forschung|bericht|report)[\s:]+[A-Z][a-zA-ZäöüÄÖÜß\s]+/gi) || []
@@ -651,6 +655,9 @@ export function extractTextContent(html, headingVisibility = null) {
     imageAnalysis
   }
 
+  // Calculate hedge density
+  const hedgeDensity = calculateHedgeDensity(bodyText)
+
   return {
     title,
     h1,
@@ -662,7 +669,122 @@ export function extractTextContent(html, headingVisibility = null) {
     firstParagraph: firstParagraphWords,
     authorInfo,
     dateInfo,
-    structureAnalysis
+    structureAnalysis,
+    hedgeDensity
+  }
+}
+
+/**
+ * Fetch and validate /.well-known/agent-facts (NANDA protocol)
+ * Used for AI agent discovery. Returns structured result or null.
+ * @param {string} url - The page URL to derive the domain from
+ * @returns {Object|null} { exists, valid, data, error }
+ */
+export async function fetchAgentFacts(url) {
+  try {
+    const urlObj = new URL(url)
+    const agentFactsUrl = `${urlObj.protocol}//${urlObj.host}/.well-known/agent-facts`
+
+    const response = await fetch(agentFactsUrl, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (!response.ok) {
+      return { exists: false, valid: false, data: null }
+    }
+
+    const text = await response.text()
+    let data
+    try {
+      data = JSON.parse(text)
+    } catch {
+      return { exists: true, valid: false, data: null, error: 'Invalid JSON' }
+    }
+
+    // Basic NANDA schema validation
+    const hasRequiredFields = data['@context'] && data.id && data.agent_name
+    return {
+      exists: true,
+      valid: hasRequiredFields,
+      data: hasRequiredFields ? {
+        agentName: data.agent_name,
+        id: data.id,
+        description: data.description || null,
+      } : null,
+      error: hasRequiredFields ? null : 'Missing required fields (@context, id, agent_name)'
+    }
+  } catch (e) {
+    return { exists: false, valid: false, data: null }
+  }
+}
+
+/**
+ * Calculate hedge density - percentage of hedge words in text content.
+ * GEO research shows confident language is cited 3x more by AI systems.
+ * Target: < 0.2% hedge density.
+ * @param {string} bodyText - The page's body text content
+ * @returns {Object} { hedgeDensity, hedgeCount, wordCount, hedgeWords }
+ */
+export function calculateHedgeDensity(bodyText) {
+  if (!bodyText || bodyText.length === 0) {
+    return { hedgeDensity: 0, hedgeCount: 0, wordCount: 0, hedgeWords: [] }
+  }
+
+  // Hedge word/phrase list based on GEO research
+  // Multi-word phrases are checked first, then single words
+  const hedgePhrases = [
+    'it seems', 'it appears', 'some believe', 'could be', 'might be',
+    'may be', 'it is possible', 'to some extent', 'in some cases',
+    'es scheint', 'es könnte', 'möglicherweise', 'unter umständen',
+    'in gewisser weise', 'zum teil', 'es wird angenommen',
+  ]
+
+  const hedgeSingleWords = [
+    'maybe', 'possibly', 'perhaps', 'might', 'arguably', 'potentially',
+    'apparently', 'presumably', 'supposedly', 'roughly', 'approximately',
+    'vielleicht', 'eventuell', 'vermutlich', 'wahrscheinlich', 'angeblich',
+    'ungefähr', 'scheinbar',
+  ]
+
+  const lowerText = bodyText.toLowerCase()
+  const words = bodyText.split(/\s+/).filter(w => w.length > 0)
+  const wordCount = words.length
+
+  if (wordCount === 0) {
+    return { hedgeDensity: 0, hedgeCount: 0, wordCount: 0, hedgeWords: [] }
+  }
+
+  let hedgeCount = 0
+  const foundHedges = []
+
+  // Count multi-word phrases
+  for (const phrase of hedgePhrases) {
+    const regex = new RegExp(`\\b${phrase.replace(/\s+/g, '\\s+')}\\b`, 'gi')
+    const matches = lowerText.match(regex)
+    if (matches) {
+      hedgeCount += matches.length
+      foundHedges.push(`"${phrase}" (${matches.length}x)`)
+    }
+  }
+
+  // Count single hedge words
+  for (const word of hedgeSingleWords) {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi')
+    const matches = lowerText.match(regex)
+    if (matches) {
+      hedgeCount += matches.length
+      foundHedges.push(`"${word}" (${matches.length}x)`)
+    }
+  }
+
+  const hedgeDensity = (hedgeCount / wordCount) * 100
+
+  return {
+    hedgeDensity: Math.round(hedgeDensity * 100) / 100,  // Round to 2 decimal places
+    hedgeCount,
+    wordCount,
+    hedgeWords: foundHedges.slice(0, 10)  // Top 10 for display
   }
 }
 

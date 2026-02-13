@@ -236,8 +236,15 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
 - Über-uns/Impressum vorhanden (+3)
 
 ### 5. Aktualität (5 Punkte)
-- Aktuelle Jahreszahlen (2024/2025) im Content (+3)
+- Aktuelle Jahreszahlen (2025/2026) im Content (+3)
 - "Aktualisiert am" Datum vorhanden (+2)
+
+### Hedge-Density (Confidence-Faktor)
+- Konfidente Aussagen werden 3x häufiger von KI zitiert
+- Ziel: < 0.2% Hedge-Wörter (maybe, possibly, perhaps, might, etc.)
+- Hedge-Density > 0.5%: -5 Punkte (zu viel unsichere Sprache)
+- Hedge-Density 0.2-0.5%: -2 Punkte (verbesserungswürdig)
+- Hedge-Density < 0.2%: Kein Abzug (gut)
 
 ## Negative Faktoren (Abzüge)
 - **noindex Meta-Tag vorhanden: -30 (KRITISCH!)** - Seite wird nicht indexiert, KI kann nicht darauf zugreifen
@@ -249,9 +256,12 @@ Gib NUR dieses JSON zurück, KEIN anderer Text:
 - Keine Statistiken/Zahlen: -10
 - Keine Quellenangaben: -10
 - Kein Autor erkennbar: -5
-- Veraltete Inhalte (keine 2024/2025 Referenzen): -5
+- Veraltete Inhalte (keine 2025/2026 Referenzen): -5
 - Keyword Stuffing erkennbar: -10
 - Wichtige Infos nur in Bildern: -10
+- Hohe Hedge-Density (> 0.5%): -5 (unsichere Sprache reduziert KI-Zitierbarkeit)
+- HTML über 1MB: -10 (KRITISCH - KI-Crawler kürzen oder ignorieren große Seiten)
+- Content-to-Code Ratio unter 15%: -5 (zu viel Code, zu wenig Inhalt für KI-Crawler)
 
 ## KI-Crawler (robots.txt Check)
 Erlaubt sein sollten:
